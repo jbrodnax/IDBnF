@@ -1,0 +1,2 @@
+Fulling installing capstone requires installing 'libcapstone-dev' in addition to (possibly) libcapstone3.
+Otherwise, capstone header file doesn't seem to exist.
