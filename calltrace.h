@@ -17,6 +17,7 @@
 #define MAGICNUM	0x234
 #define FRST_FN		5
 #define NEXT_FN		45
+#define FN_HDR_SIZE	45
 #define FN_NAME		32
 #define FN_ADDR		8
 #define FN_SIZE		4
@@ -31,6 +32,7 @@ struct __attribute__((packed)) _fn_entry{
 	char name[32];
 	uint64_t addr;
 	uint32_t size;
+	void *data;
 };
 
 struct _fn_mgr{
@@ -45,7 +47,11 @@ pthread_rwlock_t fn_lock2;
 /*Function prototypes*/
 void *malloc_s(size_t s);
 
-/*function_list prototypes*/
+/*disas prototypes*/
+int da_disas_x86(void *data, uint64_t addr, size_t sz);
+int da_disas_fn(struct _fn_entry *f);
+
+/*node_fn list prototypes*/
 node_fn *nfn_add(struct _fn_entry *fn, struct _fn_mgr *mgr);
 node_fn *nfn_search(uint64_t addr, char *name, struct _fn_mgr *mgr);
 int nfn_remove(node_fn *node, struct _fn_mgr *mgr);

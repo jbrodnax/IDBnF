@@ -15,14 +15,21 @@ def write_funcs(elf):
 	fd.write(p32(0x234)+'\n')
 	for f in fdic:
 		name = fdic[f].name
-		addr = p64(int(fdic[f].address))
-		size = p32(int(fdic[f].size))
+		addr = int(fdic[f].address)
+		size = int(fdic[f].size)
+		data = elf.read(addr, size)
+		addr = p64(addr)
+		size = p32(size)
 		#print_funcs(fdic[f])
+		#print data
 		if(len(name) > 31):
 			print "Invalid name length. Function name must be less than 32 bytes."
 		padd = 32 - len(name)
-		name = name + '\x00'*padd	
+		name = name + '\x00'*padd
+
 		fd.write(name + addr + size + '\n')
+		fd.write(data)
+		fd.write('\n')
 
 	fd.close()
 	return 0

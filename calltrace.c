@@ -43,6 +43,7 @@ void display_fn_list(struct _fn_mgr *mgr){
 	tmp = mgr->head;
 	while(tmp){
 		nfn_display_fn(tmp, NULL);
+		da_disas_fn(tmp->fn);
 		tmp = tmp->next;
 	}
 
@@ -83,10 +84,18 @@ int loadfns(char *fname){
 	}
 	//printf("Received magic num: %d (0x%08x)\n", magicnum, magicnum);
 
-	for(offset=FRST_FN;offset<fsize;offset+=NEXT_FN){
+	//for(offset=FRST_FN;offset<fsize;offset+=NEXT_FN){
+
+	offset = FRST_FN;
+	while(offset < fsize){
 		f = malloc_s(sizeof(struct _fn_entry));	
 		memcpy(f, &input[offset], sizeof(struct _fn_entry));
+		offset+=FN_HDR_SIZE;
+
+		f->data = malloc_s(f->size);
+		memcpy(f->data, &input[offset], f->size);
 		nfn_add(f, &fn_mgr);
+		offset+=f->size+1;
 	}
 
 	return 0;

@@ -1,7 +1,5 @@
+CC=gcc
 LIBNAME=capstone
 
-disas: disas.o
-	${CC} $< -O3 -Wall -l$(LIBNAME) -o $@
-
-%.o: %.c
-	${CC} -c $< -o $@
+disas: disas.c
+	$(CC) disas.c -Wall -l$(LIBNAME) -o disas
