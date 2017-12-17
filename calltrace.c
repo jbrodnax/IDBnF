@@ -42,7 +42,7 @@ void display_fn_list(struct _fn_mgr *mgr){
 	pthread_rwlock_rdlock(&fn_lock1);
 	tmp = mgr->head;
 	while(tmp){
-		display_fn(tmp);
+		nfn_display_fn(tmp, NULL);
 		tmp = tmp->next;
 	}
 
@@ -86,7 +86,7 @@ int loadfns(char *fname){
 	for(offset=FRST_FN;offset<fsize;offset+=NEXT_FN){
 		f = malloc_s(sizeof(struct _fn_entry));	
 		memcpy(f, &input[offset], sizeof(struct _fn_entry));
-		add_new(f, &fn_mgr);
+		nfn_add(f, &fn_mgr);
 	}
 
 	return 0;

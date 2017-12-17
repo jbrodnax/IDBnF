@@ -46,7 +46,7 @@ pthread_rwlock_t fn_lock2;
 void *malloc_s(size_t s);
 
 /*function_list prototypes*/
-node_fn *add_new(struct _fn_entry *fn, struct _fn_mgr *mgr);
-node_fn *search(uint64_t addr, char *name, struct _fn_mgr *mgr);
-int remove_node(node_fn *node, struct _fn_mgr *mgr);
-void display_fn(node_fn *node);
+node_fn *nfn_add(struct _fn_entry *fn, struct _fn_mgr *mgr);
+node_fn *nfn_search(uint64_t addr, char *name, struct _fn_mgr *mgr);
+int nfn_remove(node_fn *node, struct _fn_mgr *mgr);
+void nfn_display_fn(node_fn *node, pthread_rwlock_t *lock);
