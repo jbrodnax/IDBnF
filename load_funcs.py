@@ -8,11 +8,14 @@ def print_funcs(f):
 def write_funcs(elf):
 	flname	= "ftable.txt"
 	fdic	= elf.functions
+	#got	= elf.got
+	plt	= elf.plt
 	fd	= open(flname, 'w')
 	if not fd:
 		return -1
 
 	fd.write(p32(0x234)+'\n')
+	fd.write(p32(len(fdic))+'\n')
 	for f in fdic:
 		name = fdic[f].name
 		addr = int(fdic[f].address)
@@ -30,6 +33,17 @@ def write_funcs(elf):
 		fd.write(name + addr + size + '\n')
 		fd.write(data)
 		fd.write('\n')
+
+	fd.write(p32(0x567)+'\n')
+	for p in plt:
+		name = str(p)
+		addr = p64(int(plt[p]))
+		if(len(name) > 31):
+			print "Invalid plt name length."
+		padd = 32 - len(name)
+		name = name + '\x00'*padd
+
+		fd.write(name + addr + '\n')
 
 	fd.close()
 	return 0

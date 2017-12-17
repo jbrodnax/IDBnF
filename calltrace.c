@@ -21,8 +21,11 @@ void clean_fn_list(struct _fn_mgr *mgr){
 	pthread_rwlock_wrlock(&fn_lock1);
 	tmp1 = mgr->head;
 	while(tmp1){
-		if(tmp1->fn)
+		if(tmp1->fn){
+			if(tmp1->fn->data)
+				free(tmp1->fn->data);
 			free(tmp1->fn);
+		}
 		tmp2 = tmp1;
 		tmp1 = tmp1->next;
 		free(tmp2);
@@ -43,7 +46,8 @@ void display_fn_list(struct _fn_mgr *mgr){
 	tmp = mgr->head;
 	while(tmp){
 		nfn_display_fn(tmp, NULL);
-		da_disas_fn(tmp->fn);
+		if(tmp->fn->data)
+			da_disas_fn(tmp->fn);
 		tmp = tmp->next;
 	}
 
@@ -53,7 +57,7 @@ void display_fn_list(struct _fn_mgr *mgr){
 
 int loadfns(char *fname){
 	long int fsize;
-	int magicnum;
+	int magicnum, numfns;
 	uint32_t offset;
 	FILE *fp;
 	char *input;
@@ -81,13 +85,16 @@ int loadfns(char *fname){
 	memcpy(&magicnum, input, sizeof(int));
 	if(magicnum != MAGICNUM){
 		printf("[!] Error: in loadfuncs. Invalid file type.\n");
+		exit(EXIT_FAILURE);
 	}
-	//printf("Received magic num: %d (0x%08x)\n", magicnum, magicnum);
-
-	//for(offset=FRST_FN;offset<fsize;offset+=NEXT_FN){
+	memcpy(&numfns, &input[sizeof(int)+1], sizeof(int));
+	printf("Number of symbols: %d\n", numfns);
 
 	offset = FRST_FN;
-	while(offset < fsize){
+	while(numfns > 0){
+		if(offset >= fsize)
+			return 0;
+
 		f = malloc_s(sizeof(struct _fn_entry));	
 		memcpy(f, &input[offset], sizeof(struct _fn_entry));
 		offset+=FN_HDR_SIZE;
@@ -96,6 +103,23 @@ int loadfns(char *fname){
 		memcpy(f->data, &input[offset], f->size);
 		nfn_add(f, &fn_mgr);
 		offset+=f->size+1;
+		numfns--;
+	}
+
+	memcpy(&magicnum, &input[offset], sizeof(int));
+	if(magicnum != MAGICPLT){
+		printf("[!] Error: in loadfuncs. Invalid plt id.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	offset+=(sizeof(int)+1);
+	while(offset < fsize){
+		f = malloc_s(sizeof(struct _fn_entry));
+		memcpy(f, &input[offset], (FN_NAME+FN_ADDR));
+		f->fn_plt = malloc_s(sizeof(struct _fn_plt));
+		f->fn_plt->plt_addr = f->addr;
+		nfn_add(f, &fn_mgr);
+		offset+=(FN_NAME+FN_ADDR)+1;
 	}
 
 	return 0;

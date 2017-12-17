@@ -15,8 +15,9 @@
 
 /*ftable offsets and sizes*/
 #define MAGICNUM	0x234
-#define FRST_FN		5
-#define NEXT_FN		45
+#define MAGICPLT	0x567
+#define FRST_FN		10
+//#define NEXT_FN		45
 #define FN_HDR_SIZE	45
 #define FN_NAME		32
 #define FN_ADDR		8
@@ -28,11 +29,19 @@ typedef struct _node_fn{
 	struct _node_fn *prev;
 }node_fn;
 
+struct __attribute__((packed)) _fn_plt{
+/*got_addr and plt_addr hold the addrs of the got and plt entries.
+* _fn_entry->addr will be updated when plt entry is resolved at runtime.*/
+	uint64_t got_addr;
+	uint64_t plt_addr;
+};
+
 struct __attribute__((packed)) _fn_entry{
 	char name[32];
 	uint64_t addr;
 	uint32_t size;
 	void *data;
+	struct _fn_plt *fn_plt;
 };
 
 struct _fn_mgr{
