@@ -6,8 +6,10 @@
 #include <netdb.h>
 #include <limits.h>
 #include <pthread.h>
+#include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/user.h>
 
 #ifndef CALLTRACE_H
 #define CALLTRACE_H
