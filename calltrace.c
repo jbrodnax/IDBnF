@@ -140,6 +140,11 @@ int loadfns(char *fname){
 	return 0;
 }
 
+int init_calltraps(struct _trace_proc *tproc){
+
+	return 0;
+}
+
 void calltrace(struct _trace_proc *tproc){
 
 	if(!tproc)
@@ -204,7 +209,7 @@ int main(int argc, char *argv[]){
 	memset(&fn_mgr, 0, sizeof(struct _fn_mgr));
 	filename = argv[2];
 	loadfns(filename);
-	//display_fn_list(&fn_mgr);
+	display_fn_list(&fn_mgr);
 	memset(&tproc, 0, sizeof(struct _trace_proc));
 	tproc.name = malloc_s(fl_1+1);
 	strncpy(tproc.name, argv[1], (fl_1+1));

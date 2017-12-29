@@ -20,8 +20,10 @@ int da_disas_x86(void *data, uint64_t addr, size_t sz){
 	count = cs_disasm(handle, data, sz, start_addr, 0, &insn);
 	if(count > 0){
 		for(i=0;i<count;i++){
-			printf("0x%"PRIx64":\t%s\t\t%s\n", insn[i].address, insn[i].mnemonic,
-				insn[i].op_str);
+			printf("0x%"PRIx64":\t%s\t\t%s\n", insn[i].address, insn[i].mnemonic, insn[i].op_str);
+			if(insn[i].bytes[0] == 0xe8){
+				printf("[!] Call instruction found at address: 0x%08x\n", insn[i].address);
+			}
 		}
 		cs_free(insn, count);
 	}else{
