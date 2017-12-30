@@ -1,6 +1,6 @@
 #include "calltrace.h"
 
-struct _fn_mgr fn_mgr;
+list_mgr fn_mgr;
 
 struct _trace_proc {
 	char *name;
@@ -20,49 +20,6 @@ void *malloc_s(size_t s){
 	}
 	memset(p, 0, s);
 	return p;
-}
-
-void clean_fn_list(struct _fn_mgr *mgr){
-	node_fn *tmp1, *tmp2;
-
-	if(!mgr)
-		return;
-
-	pthread_rwlock_wrlock(&fn_lock1);
-	tmp1 = mgr->head;
-	while(tmp1){
-		if(tmp1->fn){
-			if(tmp1->fn->data)
-				free(tmp1->fn->data);
-			free(tmp1->fn);
-		}
-		tmp2 = tmp1;
-		tmp1 = tmp1->next;
-		free(tmp2);
-	}
-	memset(mgr, 0, sizeof(struct _fn_mgr));
-
-	pthread_rwlock_unlock(&fn_lock1);
-	return;
-}
-
-void display_fn_list(struct _fn_mgr *mgr){
-	node_fn *tmp;
-
-	if(!mgr)
-		return;
-
-	pthread_rwlock_rdlock(&fn_lock1);
-	tmp = mgr->head;
-	while(tmp){
-		nfn_display_fn(tmp, NULL);
-		if(tmp->fn->data)
-			da_disas_fn(tmp->fn);
-		tmp = tmp->next;
-	}
-
-	pthread_rwlock_unlock(&fn_lock1);
-	return;
 }
 
 int loadfns(char *fname){
@@ -109,13 +66,14 @@ int loadfns(char *fname){
 		if(offset >= fsize)
 			return 0;
 
-		f = malloc_s(sizeof(struct _fn_entry));	
+		f = malloc_s(sizeof(struct _fn_entry));
 		memcpy(f, &input[offset], sizeof(struct _fn_entry));
 		offset+=FN_HDR_SIZE;
 
 		f->data = malloc_s(f->size);
 		memcpy(f->data, &input[offset], f->size);
-		nfn_add(f, &fn_mgr);
+		//nfn_add(f, &fn_mgr);
+		ll_add(f, &fn_mgr);
 		offset+=f->size+1;
 		numfns--;
 	}
@@ -133,7 +91,8 @@ int loadfns(char *fname){
 		memcpy(f, &input[offset], (FN_NAME+FN_ADDR));
 		f->fn_plt = malloc_s(sizeof(struct _fn_plt));
 		f->fn_plt->plt_addr = f->addr;
-		nfn_add(f, &fn_mgr);
+		//nfn_add(f, &fn_mgr);
+		ll_add(f, &fn_mgr);
 		offset+=(FN_NAME+FN_ADDR)+1;
 	}
 
@@ -206,15 +165,18 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 
-	memset(&fn_mgr, 0, sizeof(struct _fn_mgr));
+	memset(&fn_mgr, 0, sizeof(list_mgr));
 	filename = argv[2];
 	loadfns(filename);
-	display_fn_list(&fn_mgr);
+	nfn_display_all(&fn_mgr);
+
 	memset(&tproc, 0, sizeof(struct _trace_proc));
 	tproc.name = malloc_s(fl_1+1);
 	strncpy(tproc.name, argv[1], (fl_1+1));
 	init_trace(&tproc);
-	clean_fn_list(&fn_mgr);
+
+	ll_clean(&fn_mgr);
+	
 	return 0;
 }
 

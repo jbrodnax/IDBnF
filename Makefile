@@ -7,8 +7,8 @@ LIBCAP=capstone
 
 all: calltrace
 
-calltrace: calltrace.c $(LDIR)node_fn_ops.c $(DDIR)disas.c
-	$(CC) calltrace.c $(LDIR)node_fn_ops.c $(DDIR)disas.c -l$(LIBCAP) $(CFLAGS) -o calltrace
+calltrace: calltrace.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c
+	$(CC) calltrace.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c -l$(LIBCAP) $(CFLAGS) -o calltrace
 
 clean:
 	rm -f calltrace *.o

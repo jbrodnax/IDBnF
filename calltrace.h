@@ -25,11 +25,21 @@
 #define FN_ADDR		8
 #define FN_SIZE		4
 
+#define LTYPE_FNE	1
+#define LTYPE_PLT	2
+
 typedef struct _node_fn{
-	struct _fn_entry *fn;
+	void *fn;
 	struct _node_fn *next;
 	struct _node_fn *prev;
 }node_fn;
+
+typedef struct _list_manager{
+	node_fn *head;
+	node_fn *tail;
+	uint32_t list_size;
+	uint8_t type;
+}list_mgr;
 
 struct __attribute__((packed)) _fn_plt{
 /*got_addr and plt_addr hold the addrs of the got and plt entries.
@@ -46,12 +56,6 @@ struct __attribute__((packed)) _fn_entry{
 	struct _fn_plt *fn_plt;
 };
 
-struct _fn_mgr{
-	node_fn *head;
-	node_fn *tail;
-	uint32_t list_size;
-};
-
 pthread_rwlock_t fn_lock1;
 pthread_rwlock_t fn_lock2;
 
@@ -62,8 +66,12 @@ void *malloc_s(size_t s);
 int da_disas_x86(void *data, uint64_t addr, size_t sz);
 int da_disas_fn(struct _fn_entry *f);
 
+/*list_ops prototypes*/
+node_fn *ll_add(void *data, list_mgr *mgr);
+int ll_remove(node_fn *node, list_mgr *mgr);
+int ll_clean(list_mgr *mgr);
+
 /*node_fn list prototypes*/
-node_fn *nfn_add(struct _fn_entry *fn, struct _fn_mgr *mgr);
-node_fn *nfn_search(uint64_t addr, char *name, struct _fn_mgr *mgr);
-int nfn_remove(node_fn *node, struct _fn_mgr *mgr);
-void nfn_display_fn(node_fn *node, pthread_rwlock_t *lock);
+node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr);
+void nfn_display_all(list_mgr *mgr);
+void nfn_display(node_fn *node, pthread_rwlock_t *lock);
