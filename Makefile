@@ -3,12 +3,13 @@ CFLAGSDB=-Wall -W -g -Werror
 CFLAGS=-pthread
 LDIR=llist_modules/
 DDIR=disassembler_modules/
+TDIR=trace_modules/
 LIBCAP=capstone
 
-all: calltrace
+all: mainv1
 
-calltrace: calltrace.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c
-	$(CC) calltrace.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c -l$(LIBCAP) $(CFLAGS) -o calltrace
+mainv1: main_v1.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c $(TDIR)tracelib.c
+	$(CC) main_v1.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c $(TDIR)tracelib.c -l$(LIBCAP) $(CFLAGS) -o main_v1
 
 clean:
-	rm -f calltrace *.o
+	rm -f main_v1 *.o

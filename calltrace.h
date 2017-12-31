@@ -56,6 +56,14 @@ struct __attribute__((packed)) _fn_entry{
 	struct _fn_plt *fn_plt;
 };
 
+struct _trace_proc {
+	char *name;
+	pid_t pid;
+	int status;
+	struct user_regs_struct oldregs;
+	struct user_regs_struct newregs;
+};
+
 pthread_rwlock_t fn_lock1;
 pthread_rwlock_t fn_lock2;
 
@@ -75,3 +83,10 @@ int ll_clean(list_mgr *mgr);
 node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr);
 void nfn_display_all(list_mgr *mgr);
 void nfn_display(node_fn *node, pthread_rwlock_t *lock);
+
+/*trace lib prototypes*/
+int init_calltraps(struct _trace_proc *tproc);
+void calltrace(struct _trace_proc *tproc);
+int init_trace(struct _trace_proc *tproc);
+
+
