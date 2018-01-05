@@ -44,6 +44,9 @@ node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr){
 }
 
 void nfn_display_all(list_mgr *mgr){
+/*
+* Thread-safe method for printing data for all function-nodes in a linked-list
+*/
 	node_fn *tmp;
 	struct _fn_entry *fn;
 
@@ -82,14 +85,14 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock){
 		pthread_rwlock_rdlock(lock);
 		fn = node->fn;
 		if(fn)
-			printf("[*] Function Data\nName:\t\t%s\nAddr:\t\t%p\nSize:\t\t%d\n", fn->name, fn->addr, fn->size);
+			printf("[*] Function Data\nName:\t\t%s\nAddr:\t\t%p\nSize:\t\t%d\n", fn->name, (void *)fn->addr, fn->size);
 		pthread_rwlock_unlock(lock);
 		return;
 
 	REG:
 		fn = node->fn;
 		if(fn)
-			printf("[*] Function Data\nName:\t\t%s\nAddr:\t\t%p\nSize:\t\t%d\n", fn->name, fn->addr, fn->size);
+			printf("[*] Function Data\nName:\t\t%s\nAddr:\t\t%p\nSize:\t\t%d\n", fn->name, (void *)fn->addr, fn->size);
 		return;
 }
 
