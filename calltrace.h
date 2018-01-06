@@ -56,6 +56,12 @@ struct __attribute__((packed)) _fn_entry{
 	struct _fn_plt *fn_plt;
 };
 
+struct _tree_node {
+	struct _fn_entry *fn;
+	struct _tree_node *parent;
+	struct _tree_node *children[];
+};
+
 struct _trace_proc {
 	char *name;
 	pid_t pid;

@@ -1,6 +1,7 @@
 #include "calltrace.h"
 
 list_mgr fn_mgr;
+list_mgr stc_calltree;
 struct _trace_proc tproc;
 
 void *malloc_s(size_t s){
@@ -92,21 +93,21 @@ int loadfns(char *fname){
 
 int main(int argc, char *argv[]){
 	char *filename;
-	size_t fl_1, fl_2;
+	size_t fs1, fs2;
 
 	if(argc != 3){
 		printf("Usage: %s <binary file> <function file>\n", argv[0]);
 		exit(0);
 	}
 
-	fl_1 = strlen(argv[1]);
-	if(fl_1 < 1){
+	fs1 = strlen(argv[1]);
+	if(fs1 < 1){
 		printf("Invalid binary file name.\n");
 		exit(1);
 	}
 
-	fl_2 = strlen(argv[2]);
-	if(fl_2 < 1){
+	fs2 = strlen(argv[2]);
+	if(fs2 < 1){
 		printf("Invalid function file name.\n");
 		exit(1);
 	}
@@ -117,8 +118,8 @@ int main(int argc, char *argv[]){
 	nfn_display_all(&fn_mgr);
 
 	memset(&tproc, 0, sizeof(struct _trace_proc));
-	tproc.name = malloc_s(fl_1+1);
-	strncpy(tproc.name, argv[1], (fl_1+1));
+	tproc.name = malloc_s(fs1+1);
+	strncpy(tproc.name, argv[1], (fs1+1));
 	init_trace(&tproc);
 
 	ll_clean(&fn_mgr);

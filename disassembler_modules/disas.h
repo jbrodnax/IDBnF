@@ -13,4 +13,13 @@
 #define JP	0x7A
 #define JNP	0x7B
 #define JL	0x7C
-#define JNL	0x7A
+#define JNL	0x7D
+#define JLE	0x7E
+#define JG	0x7F
+
+#define CALL	0xE8
+#define JMP_L	0xE9
+#define JMP_S	0xEB
+
+#define MIN_JOP	0x72
+#define MAX_JOP	0x7F
