@@ -43,13 +43,13 @@ node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr){
 		return tmp;
 }
 
-struct _tree_node * build_calltree(struct _fn_entry *start){
-	struct _tree_node *root;
+struct _TR_node * build_calltree(struct _fn_entry *start){
+	struct _TR_node *root;
 
 	if(!start)
 		return NULL;
 
-	root = malloc_s(sizeof(struct _tree_node));
+	root = malloc_s(sizeof(struct _TR_node));
 
 	return root;
 }
