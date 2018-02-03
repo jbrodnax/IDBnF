@@ -43,6 +43,21 @@ node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr){
 		return tmp;
 }
 
+struct _TR_mgr * init_static_calltree(struct _TR_mgr *mgr, struct _fn_entry *fn_root){
+	struct _TR_mgr *new;
+
+	if(!fn_root)
+		return NULL;
+
+	if(!mgr){
+		new = malloc_s(sizeof(struct _TR_mgr));
+		mgr = new;
+	}
+
+	
+
+}
+
 struct _TR_node * build_calltree(struct _fn_entry *start){
 	struct _TR_node *root;
 
