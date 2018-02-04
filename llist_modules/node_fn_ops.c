@@ -43,32 +43,6 @@ node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr){
 		return tmp;
 }
 
-struct _TR_mgr * init_static_calltree(struct _TR_mgr *mgr, struct _fn_entry *fn_root){
-	struct _TR_mgr *new;
-
-	if(!fn_root)
-		return NULL;
-
-	if(!mgr){
-		new = malloc_s(sizeof(struct _TR_mgr));
-		mgr = new;
-	}
-
-	
-
-}
-
-struct _TR_node * build_calltree(struct _fn_entry *start){
-	struct _TR_node *root;
-
-	if(!start)
-		return NULL;
-
-	root = malloc_s(sizeof(struct _TR_node));
-
-	return root;
-}
-
 void nfn_display_all(list_mgr *mgr){
 /*
 * Thread-safe method for printing data for all function-nodes in a linked-list

@@ -56,17 +56,18 @@ struct __attribute__((packed)) _fn_entry{
 	struct _fn_plt *fn_plt;
 };
 
-struct _TR_node {
+struct __attribute__((packed)) _TR_node {
 	struct _fn_entry *fn;
 	struct _TR_node *parent;
-	struct _TR_node *children[];
+	struct _TR_node **children;
 };
 
-struct _TR_manager {
+typedef struct _tree_manager {
+	pthread_rwlock_t tr_lock;
 	uint16_t depth;
 	struct _TR_node *root;
 	struct _TR_node *last_visited;
-};
+}treemgr_t;
 
 struct _trace_proc {
 	char *name;
@@ -95,6 +96,9 @@ int ll_clean(list_mgr *mgr);
 node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr);
 void nfn_display_all(list_mgr *mgr);
 void nfn_display(node_fn *node, pthread_rwlock_t *lock);
+
+/*sa_calltree prototypes*/
+treemgr_t * init_sa_calltree(struct _fn_entry *fn_root);
 
 /*trace lib prototypes*/
 int init_calltraps(struct _trace_proc *tproc);

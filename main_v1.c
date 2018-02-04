@@ -4,6 +4,8 @@ list_mgr fn_mgr;
 list_mgr stc_calltree;
 struct _trace_proc tproc;
 
+treemgr_t *sct_mgr;
+
 void *malloc_s(size_t s){
 	void *p;
 	if((p = malloc(s)) == NULL){
@@ -121,6 +123,9 @@ int main(int argc, char *argv[]){
 	tproc.name = malloc_s(fs1+1);
 	strncpy(tproc.name, argv[1], (fs1+1));
 	init_trace(&tproc);
+
+	sct_mgr = init_sa_calltree(fn_mgr.head->fn);
+	free(sct_mgr);
 
 	ll_clean(&fn_mgr);
 	
