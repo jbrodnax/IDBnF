@@ -119,14 +119,14 @@ int main(int argc, char *argv[]){
 	loadfns(filename);
 	nfn_display_all(&fn_mgr);
 
+	sct_mgr = init_sa_calltree(fn_mgr.head->fn);
+	sa_calltree(sct_mgr->root, sct_mgr);
+	free(sct_mgr);
+
 	memset(&tproc, 0, sizeof(struct _trace_proc));
 	tproc.name = malloc_s(fs1+1);
 	strncpy(tproc.name, argv[1], (fs1+1));
 	init_trace(&tproc);
-
-	sct_mgr = init_sa_calltree(fn_mgr.head->fn);
-	sa_calltree(sct_mgr->root, sct_mgr);
-	free(sct_mgr);
 
 	ll_clean(&fn_mgr);
 	

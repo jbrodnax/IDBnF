@@ -32,8 +32,10 @@ int sa_calltree(struct _TR_node *node, treemgr_t *mgr){
 	struct _TR_node *current;
 	csh handle; 
 	cs_insn *insn;
-	uint64_t start_addr;
-	size_t count, i;
+	uint64_t addr, start_addr, callins_addr;
+	size_t count, i, sz;
+	void *data;
+	cs_x86 *x86;
 
 	if(node == NULL || mgr == NULL){
 		printf("[!] Error sa_calltree received NULL argument\n");
@@ -43,9 +45,9 @@ int sa_calltree(struct _TR_node *node, treemgr_t *mgr){
 	}
 
 	current = node;
-	void *data = current->fn->data;
-	uint64_t addr = current->fn->addr;
-	size_t sz = current->fn->size;
+	data = current->fn->data;
+	addr = current->fn->addr;
+	sz = current->fn->size;
 
 	if(!data || sz < 1)
 		return -1;
@@ -58,15 +60,22 @@ int sa_calltree(struct _TR_node *node, treemgr_t *mgr){
 	else
 		start_addr = addr;
 
+	cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
 	count = cs_disasm(handle, data, sz, start_addr, 0, &insn);
 	if(count > 0){
 		for(i=0;i<count;i++){
-			//printf("0x%"PRIx64":\t%s\t\t%s\n", insn[i].address, insn[i].mnemonic, insn[i].op_str);
-			//if(insn[i].bytes[0] >= MIN_JOP && insn[i].bytes[0] <= MAX_JOP){
-				//printf("[!] Jump instruction @ 0x%08x\n", insn[i].address);
-			//}else if(insn[i].bytes[0] == CALL){
 			if(insn[i].bytes[0] == CALL){
+				x86 = &(insn[i].detail->x86);
 				printf("[!] Call instruction found at address: 0x%08x\n", insn[i].address);
+
+				cs_x86_op *op = &(x86->operands[0]);
+				if((int)op->type == X86_OP_IMM){
+					callins_addr = op->imm;
+					printf("Instruction calls address: 0x%" PRIx64 "\n", callins_addr);
+				}else{
+					printf("[!] Error: x86 call instruction is non-IMM\n");
+					return -1;
+				}
 				//current = sa_addchild(current,
 			}
 		}
