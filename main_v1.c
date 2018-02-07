@@ -125,6 +125,7 @@ int main(int argc, char *argv[]){
 	init_trace(&tproc);
 
 	sct_mgr = init_sa_calltree(fn_mgr.head->fn);
+	sa_calltree(sct_mgr->root, sct_mgr);
 	free(sct_mgr);
 
 	ll_clean(&fn_mgr);

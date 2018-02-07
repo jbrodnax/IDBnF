@@ -8,8 +8,8 @@ LIBCAP=capstone
 
 all: mainv1
 
-mainv1: main_v1.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c $(TDIR)trace.c sa_calltree.c
-	$(CC) main_v1.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c $(TDIR)trace.c sa_calltree.c -l$(LIBCAP) $(CFLAGS) -o main_v1
+mainv1: main_v1.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c $(TDIR)trace.c $(DDIR)sa_calltree.c
+	$(CC) main_v1.c $(LDIR)list_ops.c $(LDIR)node_fn_ops.c $(DDIR)disas.c $(TDIR)trace.c $(DDIR)sa_calltree.c -l$(LIBCAP) $(CFLAGS) -o main_v1
 
 clean:
 	rm -f main_v1 *.o

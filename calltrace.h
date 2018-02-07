@@ -28,6 +28,8 @@
 #define LTYPE_FNE	1
 #define LTYPE_PLT	2
 
+#define MAX_CHILDREN	15
+
 typedef struct _node_fn{
 	void *fn;
 	struct _node_fn *next;
@@ -59,6 +61,7 @@ struct __attribute__((packed)) _fn_entry{
 struct __attribute__((packed)) _TR_node {
 	struct _fn_entry *fn;
 	struct _TR_node *parent;
+	uint8_t num_children;
 	struct _TR_node **children;
 };
 
@@ -99,6 +102,8 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock);
 
 /*sa_calltree prototypes*/
 treemgr_t * init_sa_calltree(struct _fn_entry *fn_root);
+int sa_calltree(struct _TR_node *node, treemgr_t *mgr);
+struct _TR_node *sa_addchild(struct _TR_node *parent, struct _fn_entry *f, treemgr_t *mgr);
 
 /*trace lib prototypes*/
 int init_calltraps(struct _trace_proc *tproc);
