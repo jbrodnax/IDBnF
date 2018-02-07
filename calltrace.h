@@ -102,7 +102,7 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock);
 
 /*sa_calltree prototypes*/
 treemgr_t * init_sa_calltree(struct _fn_entry *fn_root);
-int sa_calltree(struct _TR_node *node, treemgr_t *mgr);
+int sa_calltree(struct _TR_node *node, list_mgr *lmgr, treemgr_t *mgr);
 struct _TR_node *sa_addchild(struct _TR_node *parent, struct _fn_entry *f, treemgr_t *mgr);
 
 /*trace lib prototypes*/

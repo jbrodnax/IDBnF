@@ -28,11 +28,13 @@ void sa_cleantree(treemgr_t *mgr){
 	return;
 }
 
-int sa_calltree(struct _TR_node *node, treemgr_t *mgr){
+int sa_calltree(struct _TR_node *node, list_mgr *lmgr, treemgr_t *mgr){
 	struct _TR_node *current;
+	node_fn *lnode;
+	struct _fn_entry *fn;
 	csh handle; 
 	cs_insn *insn;
-	uint64_t addr, start_addr, callins_addr;
+	uint64_t addr, start_addr, call_addr_op;
 	size_t count, i, sz;
 	void *data;
 	cs_x86 *x86;
@@ -70,13 +72,19 @@ int sa_calltree(struct _TR_node *node, treemgr_t *mgr){
 
 				cs_x86_op *op = &(x86->operands[0]);
 				if((int)op->type == X86_OP_IMM){
-					callins_addr = op->imm;
-					printf("Instruction calls address: 0x%" PRIx64 "\n", callins_addr);
+					call_addr_op = op->imm;
+					printf("Instruction calls address: 0x%" PRIx64 "\n", call_addr_op);
+					lnode = nfn_search(call_addr_op, NULL, lmgr);
+					if(lnode != NULL){
+						fn = (struct _fn_entry *)lnode->fn;
+						printf("Function name: %s\n", fn->name);
+						current = sa_addchild(current, fn, mgr);
+						sa_calltree(current, lmgr, mgr);
+					}
 				}else{
 					printf("[!] Error: x86 call instruction is non-IMM\n");
 					return -1;
-				}
-				//current = sa_addchild(current,
+				}	
 			}
 		}
 		cs_free(insn, count);

@@ -8,17 +8,17 @@ node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr){
 	node_fn *tmp;
 	struct _fn_entry *fn;
 
-	if(!mgr)
+	if(!mgr){
+		printf("[!] Error in nfn_search: NULL list_mgr\n");
 		return NULL;
-	if(mgr->type != LTYPE_FNE)
-		return NULL;
+	}
 
 	pthread_rwlock_rdlock(&fn_lock1);
 	if(addr != 0){
-		tmp = mgr->head;
+		tmp = mgr->head;	
 		while(tmp){
 			if(tmp->fn != NULL){
-				fn = (struct _fn_entry *)tmp->fn;
+				fn = (struct _fn_entry *)tmp->fn;	
 				if(fn->addr == addr)
 					goto RET;
 			}

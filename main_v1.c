@@ -120,7 +120,7 @@ int main(int argc, char *argv[]){
 	nfn_display_all(&fn_mgr);
 
 	sct_mgr = init_sa_calltree(fn_mgr.head->fn);
-	sa_calltree(sct_mgr->root, sct_mgr);
+	sa_calltree(sct_mgr->root, &fn_mgr, sct_mgr);
 	free(sct_mgr);
 
 	memset(&tproc, 0, sizeof(struct _trace_proc));
