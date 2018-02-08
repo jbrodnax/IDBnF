@@ -78,6 +78,8 @@ int ll_clean(list_mgr *mgr){
 			fn = (struct _fn_entry *)tmp1->fn;
 			if(fn->data)
 				free(fn->data);
+			if(fn->subroutines)
+				free(fn->subroutines);
 			free(tmp1->fn);
 		}
 		tmp2 = tmp1;

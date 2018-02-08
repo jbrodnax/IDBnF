@@ -72,6 +72,8 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock){
 * Print node-associated function information to console.
 */
 	struct _fn_entry *fn;
+	struct _fn_entry *sub;
+	int i;
 
 	if(!node)
 		return;
@@ -84,17 +86,69 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock){
 	LOCK:
 		pthread_rwlock_rdlock(lock);
 		fn = node->fn;
-		if(fn)
+		if(fn){
 			printf("[*] Function Data\nName:\t\t%s\nAddr:\t\t%p\nSize:\t\t%d\n", fn->name, (void *)fn->addr, fn->size);
+			puts("Subroutines:");
+			for(i=0;i<fn->num_subroutines;i++){
+				sub = fn->subroutines[i];
+				if(!sub)
+					break;	
+				printf("\t%s\t(%p)\n", sub->name, (void *)sub->addr);
+			}
+		}
 		pthread_rwlock_unlock(lock);
 		return;
 
 	REG:
 		fn = node->fn;
-		if(fn)
+		if(fn){
 			printf("[*] Function Data\nName:\t\t%s\nAddr:\t\t%p\nSize:\t\t%d\n", fn->name, (void *)fn->addr, fn->size);
+			puts("Subroutines:");
+			for(i=0;i<fn->num_subroutines;i++){
+				sub = fn->subroutines[i];
+				if(!sub)
+					break;
+				printf("\t%s\t(%p)\n", sub->name, (void *)sub->addr);
+			}
+		}
 		return;
 }
+
+void nfn_subroutines(list_mgr *mgr){
+	node_fn *tmp_node;
+	struct _fn_entry *tmp_fn;
+
+	if(!mgr)
+		return;
+
+	pthread_rwlock_rdlock(&fn_lock1);
+	tmp_node = mgr->head;
+	while(tmp_node){
+		tmp_fn = (struct _fn_entry *)tmp_node->fn;
+		printf("linking subroutines for: %s\n", tmp_fn->name);
+		if((da_link_subroutines(tmp_node, mgr)) == NULL){
+			puts("[!] Error nfn_subroutines: failed to find subroutines for current function.");
+			//exit(EXIT_FAILURE);
+		}
+		tmp_node = tmp_node->next;
+	}
+
+	pthread_rwlock_unlock(&fn_lock1);
+	return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -28,7 +28,7 @@
 #define LTYPE_FNE	1
 #define LTYPE_PLT	2
 
-#define MAX_CHILDREN	15
+#define MAX_SUBROUTINES	15
 
 typedef struct _node_fn{
 	void *fn;
@@ -56,6 +56,8 @@ struct __attribute__((packed)) _fn_entry{
 	uint32_t size;
 	void *data;
 	struct _fn_plt *fn_plt;
+	struct _fn_entry **subroutines;
+	uint16_t num_subroutines;
 };
 
 struct __attribute__((packed)) _TR_node {
@@ -89,6 +91,7 @@ void *malloc_s(size_t s);
 /*disas prototypes*/
 int da_disas_x86(void *data, uint64_t addr, size_t sz);
 int da_disas_fn(struct _fn_entry *f);
+struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr);
 
 /*list_ops prototypes*/
 node_fn *ll_add(void *data, list_mgr *mgr);
@@ -99,13 +102,15 @@ int ll_clean(list_mgr *mgr);
 node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr);
 void nfn_display_all(list_mgr *mgr);
 void nfn_display(node_fn *node, pthread_rwlock_t *lock);
+void nfn_subroutines(list_mgr *mgr);
 
-/*sa_calltree prototypes*/
+/*sa_calltree prototypes
 treemgr_t * init_sa_calltree(struct _fn_entry *fn_root);
 struct _TR_node *sa_init_TRnode(struct _fn_entry *f, struct _TR_node *parent, treemgr_t *mgr);
 int sa_calltree(struct _TR_node *node, list_mgr *lmgr, treemgr_t *mgr);
 struct _TR_node *sa_addchild(struct _TR_node *parent, struct _fn_entry *f, treemgr_t *mgr);
 void sa_printfn_xrefs(struct _TR_node *c);
+*/
 
 /*trace lib prototypes*/
 int init_calltraps(struct _trace_proc *tproc);

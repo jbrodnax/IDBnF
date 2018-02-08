@@ -66,7 +66,7 @@ int loadfns(char *fname){
 
 		f->data = malloc_s(f->size);
 		memcpy(f->data, &input[offset], f->size);
-		//nfn_add(f, &fn_mgr);
+		
 		ll_add(f, &fn_mgr);
 		offset+=f->size+1;
 		numfns--;
@@ -117,15 +117,16 @@ int main(int argc, char *argv[]){
 	memset(&fn_mgr, 0, sizeof(list_mgr));
 	filename = argv[2];
 	loadfns(filename);
+	nfn_subroutines(&fn_mgr);
 	nfn_display_all(&fn_mgr);
 
-	node_fn *node_main = nfn_search(0, "main", &fn_mgr);
+	/*node_fn *node_main = nfn_search(0, "main", &fn_mgr);
 	if(node_main != NULL){
 		sct_mgr = init_sa_calltree((struct _fn_entry *)node_main->fn);
 		sa_calltree(sct_mgr->root, &fn_mgr, sct_mgr);
 		sa_printfn_xrefs(sct_mgr->root->children[0]);
 		free(sct_mgr);
-	}
+	}*/
 
 	memset(&tproc, 0, sizeof(struct _trace_proc));
 	tproc.name = malloc_s(fs1+1);

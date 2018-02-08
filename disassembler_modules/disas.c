@@ -70,6 +70,76 @@ uint64_t find_x86_call(void *data, uint64_t addr, size_t sz){
 	return 0;
 }
 
+struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr){
+	struct _fn_entry *tmp;
+	struct _fn_entry *fn;
+	node_fn *tmp_node;
+	csh handle;
+	cs_insn *insn;
+	uint64_t start_addr, addr, call_addr_op;
+	size_t count, i, sz;
+	void *data;
+	cs_x86 *x86;
+
+	if(!node || !lmgr){
+		puts("[!] Error in da_link_subroutines: recieved NULL argument");
+		exit(EXIT_FAILURE);
+	}
+
+	//pthread_rwlock_rdlock(&fn_lock1);
+	tmp = (struct _fn_entry *)node->fn;
+	data = tmp->data;
+	addr = tmp->addr;
+	sz = tmp->size;
+	//if(!tmp->subroutines){
+	tmp->subroutines = malloc_s((sizeof(struct _fn_entry *)*MAX_SUBROUTINES));
+	//}else{
+		//printf("fn_entry subroutines array has already been allocated %p\n", tmp->subroutines);
+		//memset(tmp->subroutines, 0, (sizeof(struct _fn_entry *)*MAX_SUBROUTINES));
+	//}
+	tmp->num_subroutines = 0;
+
+	if(!data || sz < 1)
+		return NULL;
+
+	if(cs_open(CS_ARCH_X86, CS_MODE_64, &handle) != CS_ERR_OK)
+		return NULL;
+
+	if(addr == 0)
+		start_addr = 0x1000;
+	else
+		start_addr = addr;
+
+	cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
+	if((count = cs_disasm(handle, data, sz, start_addr, 0, &insn)) < 1){
+		printf("[!] Error: in da_link_subroutines. Failed to disassemble data.\n");
+		return NULL;
+	}
+	for(i=0;i<count;i++){
+		if(insn[i].bytes[0] == CALL){
+			x86 = &(insn[i].detail->x86);
+			cs_x86_op *op = &(x86->operands[0]);
+			if((int)op->type == X86_OP_IMM){
+				call_addr_op = op->imm;
+				printf("Instruction calls address: 0x%" PRIx64 "\n", call_addr_op);
+				tmp_node = nfn_search(call_addr_op, NULL, lmgr);
+				if(tmp_node != NULL){
+					fn = (struct _fn_entry *)tmp_node->fn;
+					printf("Function name: %s\n", fn->name);
+					tmp->subroutines[tmp->num_subroutines] = fn;
+					tmp->num_subroutines++;
+				}
+			}else{
+				printf("[!] Error: x86 call instruction is non-IMM\n");
+				return NULL;
+			}	
+		}
+	}
+
+	//pthread_rwlock_unlock(&fn_lock1);
+	return tmp->subroutines;
+}
+
 int da_disas_fn(struct _fn_entry *f){
 	if(!f)
 		return -1;
@@ -80,3 +150,13 @@ int da_disas_fn(struct _fn_entry *f){
 	}
 	return 0;
 }
+
+
+
+
+
+
+
+
+
+
