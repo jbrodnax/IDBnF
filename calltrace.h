@@ -102,8 +102,10 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock);
 
 /*sa_calltree prototypes*/
 treemgr_t * init_sa_calltree(struct _fn_entry *fn_root);
+struct _TR_node *sa_init_TRnode(struct _fn_entry *f, struct _TR_node *parent, treemgr_t *mgr);
 int sa_calltree(struct _TR_node *node, list_mgr *lmgr, treemgr_t *mgr);
 struct _TR_node *sa_addchild(struct _TR_node *parent, struct _fn_entry *f, treemgr_t *mgr);
+void sa_printfn_xrefs(struct _TR_node *c);
 
 /*trace lib prototypes*/
 int init_calltraps(struct _trace_proc *tproc);

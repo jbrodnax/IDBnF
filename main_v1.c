@@ -119,9 +119,13 @@ int main(int argc, char *argv[]){
 	loadfns(filename);
 	nfn_display_all(&fn_mgr);
 
-	sct_mgr = init_sa_calltree(fn_mgr.head->fn);
-	sa_calltree(sct_mgr->root, &fn_mgr, sct_mgr);
-	free(sct_mgr);
+	node_fn *node_main = nfn_search(0, "main", &fn_mgr);
+	if(node_main != NULL){
+		sct_mgr = init_sa_calltree((struct _fn_entry *)node_main->fn);
+		sa_calltree(sct_mgr->root, &fn_mgr, sct_mgr);
+		sa_printfn_xrefs(sct_mgr->root->children[0]);
+		free(sct_mgr);
+	}
 
 	memset(&tproc, 0, sizeof(struct _trace_proc));
 	tproc.name = malloc_s(fs1+1);

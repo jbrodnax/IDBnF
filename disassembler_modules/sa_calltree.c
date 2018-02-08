@@ -28,6 +28,23 @@ void sa_cleantree(treemgr_t *mgr){
 	return;
 }
 
+struct _TR_node *sa_init_TRnode(struct _fn_entry *f, struct _TR_node *parent, treemgr_t *mgr){
+	struct _TR_node *new;
+
+	/*TODO: make function thread-safe?*/
+	if(f == NULL || parent == NULL || mgr == NULL){
+		printf("[!] Error in sa_init_TRnode: recieved NULL argument.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	new = malloc_s(sizeof(struct _TR_node));
+	new->children = malloc_s((sizeof(struct _TR_node *)*MAX_CHILDREN));
+	new->fn = f;
+	new->parent = parent;
+
+	return new;
+}
+
 int sa_calltree(struct _TR_node *node, list_mgr *lmgr, treemgr_t *mgr){
 	struct _TR_node *current;
 	node_fn *lnode;
@@ -64,20 +81,19 @@ int sa_calltree(struct _TR_node *node, list_mgr *lmgr, treemgr_t *mgr){
 
 	cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
 	count = cs_disasm(handle, data, sz, start_addr, 0, &insn);
+
 	if(count > 0){
 		for(i=0;i<count;i++){
 			if(insn[i].bytes[0] == CALL){
 				x86 = &(insn[i].detail->x86);
-				printf("[!] Call instruction found at address: 0x%08x\n", insn[i].address);
-
 				cs_x86_op *op = &(x86->operands[0]);
 				if((int)op->type == X86_OP_IMM){
 					call_addr_op = op->imm;
-					printf("Instruction calls address: 0x%" PRIx64 "\n", call_addr_op);
+					//printf("Instruction calls address: 0x%" PRIx64 "\n", call_addr_op);
 					lnode = nfn_search(call_addr_op, NULL, lmgr);
 					if(lnode != NULL){
 						fn = (struct _fn_entry *)lnode->fn;
-						printf("Function name: %s\n", fn->name);
+						//printf("Function name: %s\n", fn->name);
 						current = sa_addchild(current, fn, mgr);
 						sa_calltree(current, lmgr, mgr);
 					}
@@ -110,17 +126,26 @@ struct _TR_node *sa_addchild(struct _TR_node *parent, struct _fn_entry *f, treem
 		return NULL;
 	}
 	/*Create new child, add fn entry, link parent and child*/
-	new_child = malloc_s(sizeof(struct _TR_node));
-	new_child->fn = f;
-
+	new_child = sa_init_TRnode(f, parent, mgr);
 	parent->children[parent->num_children] = new_child;
 	parent->num_children++;
-	new_child->parent = parent;
 	mgr->depth++;
 
 	pthread_rwlock_unlock(&mgr->tr_lock);
 	return new_child;
 }
+
+void sa_printfn_xrefs(struct _TR_node *c){
+	struct _TR_node *tmp;
+	int i;
+
+	printf("%s calls:\n", c->fn->name);
+	for(i=0; i<c->num_children; i++){
+		printf("%s\n", c->children[i]->fn->name);
+	}
+	return;
+}
+
 
 
 
