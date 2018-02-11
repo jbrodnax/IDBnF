@@ -123,6 +123,12 @@ int main(int argc, char *argv[]){
 	nfn_subroutines(fn_mgr);
 	nfn_display_all(fn_mgr);
 
+	node_fn *_entry = nfn_search(0, "main", fn_mgr);
+	if(_entry){	
+		struct _fn_entry *entry = (struct _fn_entry *)_entry->fn;
+		nfn_subroutines_display(entry, 0, fn_mgr);
+	}
+
 	/*memset(&tproc, 0, sizeof(struct _trace_proc));
 	tproc.name = malloc_s(fs1+1);
 	strncpy(tproc.name, argv[1], (fs1+1));

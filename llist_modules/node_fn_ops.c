@@ -141,7 +141,32 @@ void nfn_subroutines(list_mgr *mgr){
 	return;
 }
 
+void nfn_subroutines_display(struct _fn_entry *entry_pt, uint8_t lvl, list_mgr *mgr){
+	node_fn *current;
+	struct _fn_entry *tmp1;
+	int i, l;
 
+	tmp1 = entry_pt;
+	if(!tmp1)
+		return;
+
+	if(lvl == 0){
+		pthread_rwlock_rdlock(&mgr->ll_lock);
+		puts("Call Tree: [lvl] name (#subs)");
+	}
+
+	for(l=0;l<lvl;l++)
+		write(1,"\t",1);
+
+	printf("[%d] %s (%d)\n", lvl, tmp1->name, tmp1->num_subroutines);
+	for(i=0;i<tmp1->num_subroutines;i++)
+		nfn_subroutines_display(tmp1->subroutines[i], lvl+1, mgr);
+
+	if(lvl == 0)
+		pthread_rwlock_unlock(&mgr->ll_lock);
+
+	return;
+}
 
 
 

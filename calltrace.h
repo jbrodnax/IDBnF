@@ -94,6 +94,7 @@ node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr);
 void nfn_display_all(list_mgr *mgr);
 void nfn_display(node_fn *node, pthread_rwlock_t *lock);
 void nfn_subroutines(list_mgr *mgr);
+void nfn_subroutines_display(struct _fn_entry *entry_pt, uint8_t lvl, list_mgr *mgr);
 
 /*trace lib prototypes*/
 int init_calltraps(struct _trace_proc *tproc);
