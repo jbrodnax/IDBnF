@@ -37,7 +37,6 @@ typedef struct _node_fn{
 }node_fn;
 
 typedef struct _list_manager{
-	pthread_rwlock_t ll_lock;
 	node_fn *head;
 	node_fn *tail;
 	uint32_t list_size;
@@ -61,6 +60,20 @@ struct __attribute__((packed)) _fn_entry{
 	uint16_t num_subroutines;
 };
 
+struct __attribute__((packed)) _TR_node {
+	struct _fn_entry *fn;
+	struct _TR_node *parent;
+	uint8_t num_children;
+	struct _TR_node **children;
+};
+
+typedef struct _tree_manager {
+	pthread_rwlock_t tr_lock;
+	uint16_t depth;
+	struct _TR_node *root;
+	struct _TR_node *last_visited;
+}treemgr_t;
+
 struct _trace_proc {
 	char *name;
 	pid_t pid;
@@ -69,7 +82,7 @@ struct _trace_proc {
 	struct user_regs_struct newregs;
 };
 
-//pthread_rwlock_t fn_lock1;
+pthread_rwlock_t fn_lock1;
 pthread_rwlock_t fn_lock2;
 
 /*Function prototypes*/
@@ -81,8 +94,6 @@ int da_disas_fn(struct _fn_entry *f);
 struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr);
 
 /*list_ops prototypes*/
-list_mgr *ll_init_manager();
-int ll_destroy(list_mgr *mgr);
 node_fn *ll_add(void *data, list_mgr *mgr);
 int ll_remove(node_fn *node, list_mgr *mgr);
 int ll_clean(list_mgr *mgr);
@@ -92,6 +103,14 @@ node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr);
 void nfn_display_all(list_mgr *mgr);
 void nfn_display(node_fn *node, pthread_rwlock_t *lock);
 void nfn_subroutines(list_mgr *mgr);
+
+/*sa_calltree prototypes
+treemgr_t * init_sa_calltree(struct _fn_entry *fn_root);
+struct _TR_node *sa_init_TRnode(struct _fn_entry *f, struct _TR_node *parent, treemgr_t *mgr);
+int sa_calltree(struct _TR_node *node, list_mgr *lmgr, treemgr_t *mgr);
+struct _TR_node *sa_addchild(struct _TR_node *parent, struct _fn_entry *f, treemgr_t *mgr);
+void sa_printfn_xrefs(struct _TR_node *c);
+*/
 
 /*trace lib prototypes*/
 int init_calltraps(struct _trace_proc *tproc);

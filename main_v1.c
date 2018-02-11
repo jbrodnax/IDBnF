@@ -1,10 +1,8 @@
 #include "calltrace.h"
 
-list_mgr fn_mgr;
+list_mgr *fn_mgr;
 list_mgr stc_calltree;
 struct _trace_proc tproc;
-
-treemgr_t *sct_mgr;
 
 void *malloc_s(size_t s){
 	void *p;
@@ -67,7 +65,7 @@ int loadfns(char *fname){
 		f->data = malloc_s(f->size);
 		memcpy(f->data, &input[offset], f->size);
 		
-		ll_add(f, &fn_mgr);
+		ll_add(f, fn_mgr);
 		offset+=f->size+1;
 		numfns--;
 	}
@@ -86,7 +84,7 @@ int loadfns(char *fname){
 		f->fn_plt = malloc_s(sizeof(struct _fn_plt));
 		f->fn_plt->plt_addr = f->addr;
 		//nfn_add(f, &fn_mgr);
-		ll_add(f, &fn_mgr);
+		ll_add(f, fn_mgr);
 		offset+=(FN_NAME+FN_ADDR)+1;
 	}
 
@@ -114,26 +112,18 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 
-	memset(&fn_mgr, 0, sizeof(list_mgr));
+	fn_mgr = ll_init_manager();
 	filename = argv[2];
 	loadfns(filename);
-	nfn_subroutines(&fn_mgr);
-	nfn_display_all(&fn_mgr);
+	nfn_subroutines(fn_mgr);
+	nfn_display_all(fn_mgr);
 
-	/*node_fn *node_main = nfn_search(0, "main", &fn_mgr);
-	if(node_main != NULL){
-		sct_mgr = init_sa_calltree((struct _fn_entry *)node_main->fn);
-		sa_calltree(sct_mgr->root, &fn_mgr, sct_mgr);
-		sa_printfn_xrefs(sct_mgr->root->children[0]);
-		free(sct_mgr);
-	}*/
-
-	memset(&tproc, 0, sizeof(struct _trace_proc));
+	/*memset(&tproc, 0, sizeof(struct _trace_proc));
 	tproc.name = malloc_s(fs1+1);
 	strncpy(tproc.name, argv[1], (fs1+1));
-	init_trace(&tproc);
+	init_trace(&tproc);*/
 
-	ll_clean(&fn_mgr);
+	ll_destroy(fn_mgr);
 	
 	return 0;
 }

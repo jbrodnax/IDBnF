@@ -13,7 +13,7 @@ node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr){
 		return NULL;
 	}
 
-	pthread_rwlock_rdlock(&fn_lock1);
+	pthread_rwlock_rdlock(&mgr->ll_lock);
 	if(addr != 0){
 		tmp = mgr->head;	
 		while(tmp){
@@ -39,7 +39,7 @@ node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr){
 	}
 
 	RET:
-		pthread_rwlock_unlock(&fn_lock1);
+		pthread_rwlock_unlock(&mgr->ll_lock);
 		return tmp;
 }
 
@@ -53,7 +53,7 @@ void nfn_display_all(list_mgr *mgr){
 	if(!mgr)
 		return;
 
-	pthread_rwlock_rdlock(&fn_lock1);
+	pthread_rwlock_rdlock(&mgr->ll_lock);
 	tmp = mgr->head;
 	while(tmp){
 		nfn_display(tmp, NULL);
@@ -63,7 +63,7 @@ void nfn_display_all(list_mgr *mgr){
 		tmp = tmp->next;
 	}
 
-	pthread_rwlock_unlock(&fn_lock1);
+	pthread_rwlock_unlock(&mgr->ll_lock);
 	return;
 }
 
@@ -121,7 +121,7 @@ void nfn_subroutines(list_mgr *mgr){
 	if(!mgr)
 		return;
 
-	pthread_rwlock_rdlock(&fn_lock1);
+	pthread_rwlock_rdlock(&mgr->ll_lock);
 	tmp_node = mgr->head;
 	while(tmp_node){
 		tmp_fn = (struct _fn_entry *)tmp_node->fn;
@@ -133,7 +133,7 @@ void nfn_subroutines(list_mgr *mgr){
 		tmp_node = tmp_node->next;
 	}
 
-	pthread_rwlock_unlock(&fn_lock1);
+	pthread_rwlock_unlock(&mgr->ll_lock);
 	return;
 }
 

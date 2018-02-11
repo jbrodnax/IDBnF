@@ -21,11 +21,11 @@ int da_disas_x86(void *data, uint64_t addr, size_t sz){
 	if(count > 0){
 		for(i=0;i<count;i++){
 			printf("0x%"PRIx64":\t%s\t\t%s\n", insn[i].address, insn[i].mnemonic, insn[i].op_str);
-			if(insn[i].bytes[0] >= MIN_JOP && insn[i].bytes[0] <= MAX_JOP){
+			/*if(insn[i].bytes[0] >= MIN_JOP && insn[i].bytes[0] <= MAX_JOP){
 				printf("[!] Jump instruction @ 0x%08x\n", insn[i].address);
 			}else if(insn[i].bytes[0] == CALL){
 				printf("[!] Call instruction found at address: 0x%08x\n", insn[i].address);
-			}
+			}*/
 		}
 		cs_free(insn, count);
 	}else{
@@ -91,12 +91,8 @@ struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr){
 	data = tmp->data;
 	addr = tmp->addr;
 	sz = tmp->size;
-	//if(!tmp->subroutines){
+
 	tmp->subroutines = malloc_s((sizeof(struct _fn_entry *)*MAX_SUBROUTINES));
-	//}else{
-		//printf("fn_entry subroutines array has already been allocated %p\n", tmp->subroutines);
-		//memset(tmp->subroutines, 0, (sizeof(struct _fn_entry *)*MAX_SUBROUTINES));
-	//}
 	tmp->num_subroutines = 0;
 
 	if(!data || sz < 1)
@@ -121,11 +117,11 @@ struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr){
 			cs_x86_op *op = &(x86->operands[0]);
 			if((int)op->type == X86_OP_IMM){
 				call_addr_op = op->imm;
-				printf("Instruction calls address: 0x%" PRIx64 "\n", call_addr_op);
+				//printf("Instruction calls address: 0x%" PRIx64 "\n", call_addr_op);
 				tmp_node = nfn_search(call_addr_op, NULL, lmgr);
 				if(tmp_node != NULL){
 					fn = (struct _fn_entry *)tmp_node->fn;
-					printf("Function name: %s\n", fn->name);
+					//printf("Function name: %s\n", fn->name);
 					tmp->subroutines[tmp->num_subroutines] = fn;
 					tmp->num_subroutines++;
 				}

@@ -1,5 +1,29 @@
 #include "../calltrace.h"
 
+list_mgr *ll_init_manager(){
+	list_mgr *new;
+
+	new = malloc_s(sizeof(list_mgr));
+	if(pthread_rwlock_init(&new->ll_lock, NULL) != 0){
+		perror("[!] Error in ll_init_manager: pthread_rwlock init failed. ");
+		exit(EXIT_FAILURE);
+	}
+
+	return new;
+}
+
+int ll_destroy(list_mgr *mgr){
+	if(!mgr)
+		return -1;
+	if((ll_clean(mgr)) != 0){
+		printf("[!] Error in ll_destroy: failed to clean list.\n");
+		return -1;
+	}
+
+	free(mgr);
+	return 0;
+}
+
 node_fn *ll_add(void *data, list_mgr *mgr){
 /*
 * Init new node_fn and append to tail of list.
@@ -13,7 +37,7 @@ node_fn *ll_add(void *data, list_mgr *mgr){
 	new_node = malloc_s(sizeof(node_fn));
 	new_node->fn = data;
 
-	pthread_rwlock_wrlock(&fn_lock1);
+	pthread_rwlock_wrlock(&mgr->ll_lock);
 	if(mgr->head == NULL){
 		mgr->head = new_node;
 		mgr->tail = new_node;
@@ -27,7 +51,7 @@ node_fn *ll_add(void *data, list_mgr *mgr){
 		new_node = NULL;
 	}
 
-	pthread_rwlock_unlock(&fn_lock1);
+	pthread_rwlock_unlock(&mgr->ll_lock);
 	return new_node;
 }
 
@@ -38,7 +62,7 @@ int ll_remove(node_fn *node, list_mgr *mgr){
 	if(!node || !mgr)
 		return -1;
 
-	pthread_rwlock_wrlock(&fn_lock1);
+	pthread_rwlock_wrlock(&mgr->ll_lock);
 	if(node->next && node->prev){
 		node->next->prev = node->prev;
 		node->prev->next = node->next;
@@ -56,7 +80,7 @@ int ll_remove(node_fn *node, list_mgr *mgr){
 	mgr->list_size--;
 	free(node);
 
-	pthread_rwlock_unlock(&fn_lock1);
+	pthread_rwlock_unlock(&mgr->ll_lock);
 	return 0;
 }
 
@@ -71,7 +95,7 @@ int ll_clean(list_mgr *mgr){
 	if(!mgr)
 		return -1;
 
-	pthread_rwlock_wrlock(&fn_lock1);
+	pthread_rwlock_wrlock(&mgr->ll_lock);
 	tmp1 = mgr->head;
 	while(tmp1){
 		if(tmp1->fn){
@@ -86,10 +110,8 @@ int ll_clean(list_mgr *mgr){
 		tmp1 = tmp1->next;
 		free(tmp2);
 	}
-	memset(mgr, 0, sizeof(list_mgr));
 
-	pthread_rwlock_unlock(&fn_lock1);
-
+	pthread_rwlock_unlock(&mgr->ll_lock);
 	return 0;
 }
 
