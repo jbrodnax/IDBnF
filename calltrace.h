@@ -76,6 +76,8 @@ pthread_rwlock_t fn_lock2;
 void *malloc_s(size_t s);
 
 /*disas prototypes*/
+int da_init_platform(char *arch, uint8_t da_flavor);
+void da_destroy_platform();
 int da_disas_x86(void *data, uint64_t addr, size_t sz);
 int da_disas_fn(struct _fn_entry *f);
 struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr);

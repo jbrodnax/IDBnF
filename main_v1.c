@@ -112,6 +112,11 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 
+	if(da_init_platform("amd64", 0) != 0){
+		puts("[!] Error: failed to init disassembly platform.");
+		exit(EXIT_FAILURE);
+	}
+
 	fn_mgr = ll_init_manager();
 	filename = argv[2];
 	loadfns(filename);
@@ -124,6 +129,7 @@ int main(int argc, char *argv[]){
 	init_trace(&tproc);*/
 
 	ll_destroy(fn_mgr);
+	da_destroy_platform();
 	
 	return 0;
 }

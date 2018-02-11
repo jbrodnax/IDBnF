@@ -1,5 +1,39 @@
 #include "disas.h"
 
+int da_init_platform(char *arch, uint8_t da_flavor){
+	size_t n;
+
+	n = strlen(arch);
+	if(n < 1){
+		puts("[!] Error in da_init_platform: invalid strlen for arch.");
+		return -1;
+	}
+
+	memset(&da_platform, 0, sizeof(struct platform));
+
+	if((memcmp(arch, "amd64", 5)) == 0){
+		da_platform.arch = CS_ARCH_X86;
+		da_platform.mode = CS_MODE_64;
+	}else{
+		puts("[!] Error in da_init_platform: unsupported arch type.");
+		return -1;
+	}
+
+	if(da_flavor != 0){
+		da_platform.opt_type = CS_OPT_SYNTAX;
+		da_platform.opt_value = CS_OPT_SYNTAX_ATT;
+	}
+
+	if(cs_open(da_platform.arch, da_platform.mode, &handle) != CS_ERR_OK)
+		return -1;
+
+	return 0;
+}
+
+void da_destroy_platform(){
+	cs_close(&handle);
+}
+
 int da_disas_x86(void *data, uint64_t addr, size_t sz){
 	csh handle;
 	cs_insn *insn;
@@ -11,6 +45,9 @@ int da_disas_x86(void *data, uint64_t addr, size_t sz){
 
 	if(cs_open(CS_ARCH_X86, CS_MODE_64, &handle) != CS_ERR_OK)
 		return -1;
+	if(da_platform.opt_type){
+		cs_option(handle, da_platform.opt_type, da_platform.opt_value);
+	}
 
 	if(addr == 0)
 		start_addr = 0x1000;
@@ -32,10 +69,10 @@ int da_disas_x86(void *data, uint64_t addr, size_t sz){
 		printf("[!] Error: in da_disas_x86. Failed to disassemble data.\n");
 	}
 
-	cs_close(&handle);
+	//cs_close(&handle);
 	return 0;
 }
-
+/*
 uint64_t find_x86_call(void *data, uint64_t addr, size_t sz){
 	csh handle;
 	cs_insn *insn;
@@ -69,12 +106,12 @@ uint64_t find_x86_call(void *data, uint64_t addr, size_t sz){
 	cs_close(&handle);
 	return 0;
 }
-
+*/
 struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr){
 	struct _fn_entry *tmp;
 	struct _fn_entry *fn;
 	node_fn *tmp_node;
-	csh handle;
+	//csh handle;
 	cs_insn *insn;
 	uint64_t start_addr, addr, call_addr_op;
 	size_t count, i, sz;

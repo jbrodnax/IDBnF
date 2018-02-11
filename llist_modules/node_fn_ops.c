@@ -87,6 +87,7 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock){
 		pthread_rwlock_rdlock(lock);
 		fn = node->fn;
 		if(fn){
+			puts("\n********************************");
 			printf("[*] Function Data\nName:\t\t%s\nAddr:\t\t%p\nSize:\t\t%d\n", fn->name, (void *)fn->addr, fn->size);
 			puts("Subroutines:");
 			for(i=0;i<fn->num_subroutines;i++){
@@ -95,6 +96,7 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock){
 					break;	
 				printf("\t%s\t(%p)\n", sub->name, (void *)sub->addr);
 			}
+			puts("********************************");
 		}
 		pthread_rwlock_unlock(lock);
 		return;
@@ -102,6 +104,7 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock){
 	REG:
 		fn = node->fn;
 		if(fn){
+			puts("\n********************************");
 			printf("[*] Function Data\nName:\t\t%s\nAddr:\t\t%p\nSize:\t\t%d\n", fn->name, (void *)fn->addr, fn->size);
 			puts("Subroutines:");
 			for(i=0;i<fn->num_subroutines;i++){
@@ -110,6 +113,7 @@ void nfn_display(node_fn *node, pthread_rwlock_t *lock){
 					break;
 				printf("\t%s\t(%p)\n", sub->name, (void *)sub->addr);
 			}
+			puts("********************************");
 		}
 		return;
 }

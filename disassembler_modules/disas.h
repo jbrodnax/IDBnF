@@ -23,3 +23,12 @@
 
 #define MIN_JOP	0x72
 #define MAX_JOP	0x7F
+
+struct platform {
+	cs_arch arch;
+	cs_mode mode;
+	cs_opt_type opt_type;
+	cs_opt_value opt_value;
+}da_platform;
+
+static csh handle;

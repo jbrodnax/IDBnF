@@ -13,6 +13,8 @@ def write_funcs(elf):
 	fd	= open(flname, 'w')
 	if not fd:
 		return -1
+	#write arch type
+	#fd.write(elf.arch + '\n')
 
 	fd.write(p32(0x234)+'\n')
 	fd.write(p32(len(fdic))+'\n')
