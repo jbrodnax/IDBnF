@@ -80,7 +80,7 @@ int da_init_platform(char *arch, uint8_t da_flavor);
 void da_destroy_platform();
 int da_disas_x86(void *data, uint64_t addr, size_t sz);
 int da_disas_fn(struct _fn_entry *f);
-struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr);
+uint64_t* da_link_subroutines(node_fn *node, list_mgr *lmgr);
 
 /*list_ops prototypes*/
 list_mgr *ll_init_manager();
@@ -91,6 +91,7 @@ int ll_clean(list_mgr *mgr);
 
 /*node_fn list prototypes*/
 node_fn *nfn_search(uint64_t addr, char *name, list_mgr *mgr);
+node_fn * nfn_plt_search(uint64_t call_addr, list_mgr *mgr);
 void nfn_display_all(list_mgr *mgr);
 void nfn_display(node_fn *node, pthread_rwlock_t *lock);
 void nfn_subroutines(list_mgr *mgr);

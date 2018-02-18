@@ -83,7 +83,6 @@ int loadfns(char *fname){
 		memcpy(f, &input[offset], (FN_NAME+FN_ADDR));
 		f->fn_plt = malloc_s(sizeof(struct _fn_plt));
 		f->fn_plt->plt_addr = f->addr;
-		//nfn_add(f, &fn_mgr);
 		ll_add(f, fn_mgr);
 		offset+=(FN_NAME+FN_ADDR)+1;
 	}

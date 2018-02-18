@@ -32,6 +32,8 @@ int da_init_platform(char *arch, uint8_t da_flavor){
 
 void da_destroy_platform(){
 	cs_close(&handle);
+	memset(&da_platform, 0, sizeof(struct platform));
+	return;
 }
 
 int da_disas_x86(void *data, uint64_t addr, size_t sz){
@@ -59,41 +61,7 @@ int da_disas_x86(void *data, uint64_t addr, size_t sz){
 		for(i=0;i<count;i++){
 			printf("0x%"PRIx64":\t%s\t\t%s\n", insn[i].address, insn[i].mnemonic, insn[i].op_str);
 			/*if(insn[i].bytes[0] >= MIN_JOP && insn[i].bytes[0] <= MAX_JOP){
-				printf("[!] Jump instruction @ 0x%08x\n", insn[i].address);
-			}else if(insn[i].bytes[0] == CALL){
-				printf("[!] Call instruction found at address: 0x%08x\n", insn[i].address);
-			}*/
-		}
-		cs_free(insn, count);
-	}else{
-		printf("[!] Error: in da_disas_x86. Failed to disassemble data.\n");
-	}
-
-	//cs_close(&handle);
-	return 0;
-}
-/*
-uint64_t find_x86_call(void *data, uint64_t addr, size_t sz){
-	csh handle;
-	cs_insn *insn;
-	uint64_t start_addr;
-	size_t count, i;
-
-	if(!data || sz < 1)
-		return -1;
-
-	if(cs_open(CS_ARCH_X86, CS_MODE_64, &handle) != CS_ERR_OK)
-		return -1;
-
-	if(addr == 0)
-		start_addr = 0x1000;
-	else
-		start_addr = addr;
-
-	count = cs_disasm(handle, data, sz, start_addr, 0, &insn);
-	if(count > 0){
-		for(i=0;i<count;i++){
-			//printf("0x%"PRIx64":\t%s\t\t%s\n", insn[i].address, insn[i].mnemonic, insn[i].op_str);
+				printf("[!] Jump instruction @ 0x%08x\n", insn[i].address);*/
 			if(insn[i].bytes[0] == CALL){
 				printf("[!] Call instruction found at address: 0x%08x\n", insn[i].address);
 			}
@@ -103,17 +71,17 @@ uint64_t find_x86_call(void *data, uint64_t addr, size_t sz){
 		printf("[!] Error: in da_disas_x86. Failed to disassemble data.\n");
 	}
 
-	cs_close(&handle);
+	//cs_close(&handle);
 	return 0;
 }
-*/
-struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr){
+
+uint64_t* da_link_subroutines(node_fn *node, list_mgr *lmgr){
 	struct _fn_entry *tmp;
 	struct _fn_entry *fn;
 	node_fn *tmp_node;
-	//csh handle;
 	cs_insn *insn;
-	uint64_t start_addr, addr, call_addr_op;
+	uint64_t start_addr, addr, call_addr_op, num_subs;
+	uint64_t *call_addrs;
 	size_t count, i, sz;
 	void *data;
 	cs_x86 *x86;
@@ -123,14 +91,15 @@ struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr){
 		exit(EXIT_FAILURE);
 	}
 
-	//pthread_rwlock_rdlock(&fn_lock1);
 	tmp = (struct _fn_entry *)node->fn;
 	data = tmp->data;
 	addr = tmp->addr;
 	sz = tmp->size;
 
-	tmp->subroutines = malloc_s((sizeof(struct _fn_entry *)*MAX_SUBROUTINES));
-	tmp->num_subroutines = 0;
+	//tmp->subroutines = malloc_s((sizeof(struct _fn_entry *)*MAX_SUBROUTINES));
+	call_addrs = malloc_s((sizeof(uint64_t)*MAX_SUBROUTINES)+1);
+	num_subs = 0;
+	//tmp->num_subroutines = 0;
 
 	if(!data || sz < 1)
 		return NULL;
@@ -154,14 +123,18 @@ struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr){
 			cs_x86_op *op = &(x86->operands[0]);
 			if((int)op->type == X86_OP_IMM){
 				call_addr_op = op->imm;
-				//printf("Instruction calls address: 0x%" PRIx64 "\n", call_addr_op);
+				call_addrs[num_subs+1] = call_addr_op;
+				num_subs++;
+				/*printf("Instruction calls address: 0x%" PRIx64 "\n", call_addr_op);
 				tmp_node = nfn_search(call_addr_op, NULL, lmgr);
+				if(tmp_node == NULL)
+					tmp_node = nfn_plt_search(call_addr_op, lmgr);
 				if(tmp_node != NULL){
 					fn = (struct _fn_entry *)tmp_node->fn;
 					//printf("Function name: %s\n", fn->name);
 					tmp->subroutines[tmp->num_subroutines] = fn;
 					tmp->num_subroutines++;
-				}
+				}*/
 			}else{
 				printf("[!] Error: x86 call instruction is non-IMM\n");
 				return NULL;
@@ -169,8 +142,8 @@ struct _fn_entry ** da_link_subroutines(node_fn *node, list_mgr *lmgr){
 		}
 	}
 
-	//pthread_rwlock_unlock(&fn_lock1);
-	return tmp->subroutines;
+	call_addrs[0] = num_subs;
+	return call_addrs;
 }
 
 int da_disas_fn(struct _fn_entry *f){
