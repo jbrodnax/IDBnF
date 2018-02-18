@@ -2,6 +2,7 @@
 
 list_mgr *fn_mgr;
 list_mgr stc_calltree;
+elf_info elf;
 struct _trace_proc tproc;
 
 void *malloc_s(size_t s){
@@ -14,7 +15,43 @@ void *malloc_s(size_t s){
 	return p;
 }
 
-int loadfns(char *fname){
+char * elf_loadfile(char *filename){
+	long int fsize;
+	char *input;
+
+	if(!(fp = fopen(filename, "r"))){
+		perror("[!] Error in elf_loadfile: ");
+		exit(EXIT_FAILURE);
+	}
+	fseek(fp, 0, SEEK_END);
+	fsize = ftell(fp);
+	if(fsize < 1){
+		printf("[!] Error in elf_loadfile: Invalid file size.\n");
+		exit(EXIT_FAILURE);
+	}
+	rewind(fp);
+	input = malloc_s(fsize);
+	if((fread(input, fsize, 1, fp)) < 1){
+		perror("[!] Error in elf_loadfile: ");
+		exit(EXIT_FAILURE);
+	}
+	fclose(fp);
+
+	return input;
+}
+
+int elf_loadheader(char *input, elf_info *elf){
+	uint32_t magicnum;
+
+	if(!input || !elf){
+		puts("[!] Error in elf_loadheader: null argument.");
+		return -1;
+	}
+
+	return 0;
+}
+
+int elf_loadfns(char *fname){
 	long int fsize;
 	int magicnum, numfns;
 	uint32_t offset;
@@ -110,6 +147,8 @@ int main(int argc, char *argv[]){
 		printf("Invalid function file name.\n");
 		exit(1);
 	}
+
+	memset(&elf, 0, sizeof(elf_info));
 
 	if(da_init_platform("amd64", 0) != 0){
 		puts("[!] Error: failed to init disassembly platform.");

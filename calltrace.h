@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 #include <netdb.h>
+#include <elf.h>
 #include <limits.h>
 #include <pthread.h>
 #include <sys/ptrace.h>
@@ -16,6 +17,7 @@
 #endif
 
 /*ftable offsets and sizes*/
+#define MAGICHDR	0x123
 #define MAGICNUM	0x234
 #define MAGICPLT	0x567
 #define FRST_FN		10
@@ -29,6 +31,15 @@
 #define LTYPE_PLT	2
 
 #define MAX_SUBROUTINES	15
+
+typedef struct _ELF_INFO{
+	uint32_t arch;
+	struct _sections{
+		uint64_t text_addr;
+		uint64_t plt_addr;
+		uint64_t got_addr;
+	}sections;
+}elf_info;
 
 typedef struct _node_fn{
 	void *fn;

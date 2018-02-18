@@ -11,27 +11,26 @@ def write_header(elf, fd):
 	plt	= elf.get_section_by_name('.plt').header.sh_addr
 	got	= elf.get_section_by_name('.got').header.sh_addr
 
-	fd.write(p32(0x1001)+'\n')
+	fd.write(p32(0x123)+'\n')
 	fd.write(arc+'\n')
 	fd.write(p64(txt) + p64(plt) + p64(got))
 	fd.write('\n')
-
+'''
 	print "ELF Header Info:"
 	print "Arch Type:\t\t"+arc
 	print ".text:\t\t"+hex(txt)
 	print ".plt:\t\t"+hex(plt)
 	print ".got:\t\t"+hex(got)+'\n'
-
+'''
 	return
 
 def write_funcs(elf, fd):
-	fdic	= elf.functions
-	#got	= elf.got
+	fdic	= elf.functions	
 	plt	= elf.plt
 
 	fd.write(p32(0x234)+'\n')
 	fd.write(p32(len(fdic))+'\n')
-	print "symbols:"
+	#print "symbols:"
 	for f in fdic:
 		name = fdic[f].name
 		addr = int(fdic[f].address)
@@ -51,10 +50,10 @@ def write_funcs(elf, fd):
 		fd.write('\n')
 
 	fd.write(p32(0x567)+'\n')
-	print "plt functions: "
+	#print "plt functions: "
 	for p in plt:
 		name = str(p)
-		print name
+		#print name
 		addr = p64(int(plt[p]))
 		if(len(name) > 31):
 			print "Invalid plt name length."
