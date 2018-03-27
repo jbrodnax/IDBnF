@@ -181,35 +181,120 @@ void elf_read_phdr(int fd){
 
 }
 
+char * elf_get_section(int fd, Elf64_Shdr *entry){
+	char *section;
+
+	if(!entry){
+		puts("[!] Error (elf_get_section): invalid argument.");
+		exit(EXIT_FAILURE);
+	}
+
+	section = malloc(entry->sh_size);
+	if(!section){
+		perror("[!] (elf_get_section): malloc failed. ");
+		exit(EXIT_FAILURE);
+	}
+	memset(section, 0, entry->sh_size);
+
+	if((lseek(fd, (off_t)entry->sh_offset, SEEK_SET)) < 0){
+		perror("[!] Error (elf_get_section): lseek failed. ");
+		exit(EXIT_FAILURE);
+	}
+	if((read(fd, section, entry->sh_size)) != entry->sh_size){
+		perror("[!] Error (elf_get_section): read return value differs from entry.sh_size. ");
+		exit(EXIT_FAILURE);
+	}
+
+	return section;
+}
+
+void elf_print_sym(int fd, uint16_t sym_index, Elf64_Shdr *shdr_table){
+	Elf64_Sym *sym_table;
+	Elf64_Shdr shdr;
+	uint32_t sym_count, i;
+	char *str_table;
+
+	shdr = shdr_table[sym_index];
+	sym_table = (Elf64_Sym *)elf_get_section(fd, &shdr);
+
+	str_table = elf_get_section(fd, &shdr_table[shdr.sh_link]);
+	sym_count = (shdr_table[sym_index].sh_size/sizeof(Elf64_Sym));
+
+	puts("\nFunctions: (Symbol Type: STT_FUNC)");
+	for(i=0;i<sym_count;i++){
+		if(ELF64_ST_TYPE(sym_table[i].st_info) == STT_FUNC)
+			printf("%-40s 0x%08x\n", (str_table + sym_table[i].st_name), sym_table[i].st_value);
+	}
+
+	free(str_table);
+	free(sym_table);
+	return;
+}
+
 void elf_read_shdr(int fd, uint16_t shentsize, uint16_t shnum, Elf64_Off shoff){
+/*
+* The section header table is an array of Elf32_Shdr or Elf64_Shdr structures.
+*/
 	uint32_t shdr_size;
 	uint16_t i;
-	Elf64_Shdr *shdr;
+	Elf64_Shdr *shdr_table;
+	Elf64_Shdr shdr;
+	char *sh_str;
+	int name_len;
+	int width;
 	
 	if(!(shentsize || shnum) || (shoff < 1)){
 		fprintf(stderr, "[!] Error (elf_read_shdr): invalid uintN_t argument (very descriptive.. I know.)\n");
 		exit(EXIT_FAILURE);
 	}
 
+	/*Allocate Section Header Table*/
 	shdr_size = (shentsize * shnum);
-	shdr = malloc(shdr_size);
-	if(!shdr){
+	shdr_table = malloc(shdr_size);
+	if(!shdr_table){
 		perror("[!] Error (elf_read_shdr): malloc failed. ");
 		exit(EXIT_FAILURE);
 	}
-	memset(shdr, 0, shdr_size);
+	memset(shdr_table, 0, shdr_size);
 
+	/*Read in Section Header entries*/
 	if((lseek(fd, (off_t)shoff, SEEK_SET)) < 0){
 		perror("[!] Error (elf_read_shdr): lseek failed. ");
 		exit(EXIT_FAILURE);
 	}
 
-	for(i=0;i<shnum;i++){
-		read(fd, &shdr[i], shentsize);
-		printf("0x%08x\n", shdr[i].sh_addr);
+	for(i=0;i<shnum;i++)
+		read(fd, &shdr_table[i], shentsize);
+
+	/*Allocate Section name String Table*/
+	shdr = shdr_table[hdr.e_shstrndx];
+	sh_str = malloc(shdr.sh_size);
+	if(!sh_str){
+		perror("[!] Error (elf_read_shdr): malloc failed. ");
+		exit(EXIT_FAILURE);
 	}
 
-	free(shdr);
+	/*Read in Section names from string table*/
+	if((lseek(fd, (off_t)shdr.sh_offset, SEEK_SET)) < 0){
+		perror("[!] Error (elf_read_shdr): lseek failed. ");
+		exit(EXIT_FAILURE);
+	}
+	if((read(fd, sh_str, shdr.sh_size)) != shdr.sh_size){
+		perror("[!] Error (elf_read_shdr): read return value differs from shdr.sh_size. ");
+		exit(EXIT_FAILURE);
+	}
+
+	for(i=0;i<shnum;i++)
+		printf("%-40s 0x%08x\n", (sh_str + shdr_table[i].sh_name), shdr_table[i].sh_addr);
+
+	for(i=0;i<shnum;i++){
+		if(shdr_table[i].sh_type == SHT_SYMTAB || shdr_table[i].sh_type == SHT_DYNSYM){
+			elf_print_sym(fd, i, shdr_table);
+		}
+	}
+
+	free(sh_str);
+	free(shdr_table);
 	return;
 }
 
