@@ -9,11 +9,17 @@
 #include <inttypes.h>
 #include <elf.h>
 
+int fd;
+Elf64_Shdr *shdr_table;
+char *shdr_names;
+
 Elf64_Ehdr hdr;
 Elf64_Phdr phdr;
 Elf64_Shdr *shdr;
 
-Elf64_Ehdr *elf_read_hdr(int fd, Elf64_Ehdr *hdr){
+unsigned char *text_seg;
+
+Elf64_Ehdr *elf_read_hdr(Elf64_Ehdr *hdr){
 	uint32_t hdr_size;
 	uint8_t MAGBUF[4] = {0x7f, 0x45, 0x4c, 0x46};
 
@@ -177,11 +183,7 @@ Elf64_Ehdr *elf_read_hdr(int fd, Elf64_Ehdr *hdr){
 	return hdr;
 }
 
-void elf_read_phdr(int fd){
-
-}
-
-char * elf_get_section(int fd, Elf64_Shdr *entry){
+char * elf_get_section_data(Elf64_Shdr *entry){
 	char *section;
 
 	if(!entry){
@@ -208,16 +210,16 @@ char * elf_get_section(int fd, Elf64_Shdr *entry){
 	return section;
 }
 
-void elf_print_sym(int fd, uint16_t sym_index, Elf64_Shdr *shdr_table){
+void elf_print_sym(uint16_t sym_index, Elf64_Shdr *shdr_table){
 	Elf64_Sym *sym_table;
 	Elf64_Shdr shdr;
 	uint32_t sym_count, i;
 	char *str_table;
 
 	shdr = shdr_table[sym_index];
-	sym_table = (Elf64_Sym *)elf_get_section(fd, &shdr);
+	sym_table = (Elf64_Sym *)elf_get_section_data(&shdr);
 
-	str_table = elf_get_section(fd, &shdr_table[shdr.sh_link]);
+	str_table = elf_get_section_data(&shdr_table[shdr.sh_link]);
 	sym_count = (shdr_table[sym_index].sh_size/sizeof(Elf64_Sym));
 
 	puts("\nFunctions: (Symbol Type: STT_FUNC)");
@@ -231,15 +233,29 @@ void elf_print_sym(int fd, uint16_t sym_index, Elf64_Shdr *shdr_table){
 	return;
 }
 
-void elf_read_shdr(int fd, uint16_t shentsize, uint16_t shnum, Elf64_Off shoff){
+void elf_print_section_data(unsigned char *data, uint16_t sh_size){
+	uint16_t i;
+
+	if(!data || (sh_size < 1)){
+		puts("[!] Error (elf_write_data): invalid argument.");
+		exit(EXIT_FAILURE);
+	}
+
+	puts("[*] Section Data:");
+	for(i=0;i<sh_size;i++)
+		printf("%02x ", data[i]);
+	puts("");
+
+	return;
+}
+
+void elf_get_shdrs(uint16_t shentsize, uint16_t shnum, Elf64_Off shoff){
 /*
 * The section header table is an array of Elf32_Shdr or Elf64_Shdr structures.
 */
 	uint32_t shdr_size;
 	uint16_t i;
-	Elf64_Shdr *shdr_table;
 	Elf64_Shdr shdr;
-	char *sh_str;
 	int name_len;
 	int width;
 	
@@ -266,48 +282,56 @@ void elf_read_shdr(int fd, uint16_t shentsize, uint16_t shnum, Elf64_Off shoff){
 	for(i=0;i<shnum;i++)
 		read(fd, &shdr_table[i], shentsize);
 
-	/*Allocate Section name String Table*/
-	shdr = shdr_table[hdr.e_shstrndx];
-	sh_str = malloc(shdr.sh_size);
-	if(!sh_str){
-		perror("[!] Error (elf_read_shdr): malloc failed. ");
-		exit(EXIT_FAILURE);
+	shdr_names = elf_get_section_data(&shdr_table[hdr.e_shstrndx]);
+	for(i=0;i<shnum;i++){
+		printf("%-40s 0x%08x\n", (shdr_names + shdr_table[i].sh_name), shdr_table[i].sh_addr);
+		/*if(shdr_table[i].sh_type == SHT_PROGBITS){
+			if(!(memcmp((sh_str + shdr_table[i].sh_name), ".text", strlen(".text")))){
+				text_seg = (unsigned char*)elf_get_section_data(fd, &shdr_table[i]);
+				elf_print_section_data(text_seg, shdr_table[i].sh_size);
+			}
+		}*/
 	}
-
-	/*Read in Section names from string table*/
-	if((lseek(fd, (off_t)shdr.sh_offset, SEEK_SET)) < 0){
-		perror("[!] Error (elf_read_shdr): lseek failed. ");
-		exit(EXIT_FAILURE);
-	}
-	if((read(fd, sh_str, shdr.sh_size)) != shdr.sh_size){
-		perror("[!] Error (elf_read_shdr): read return value differs from shdr.sh_size. ");
-		exit(EXIT_FAILURE);
-	}
-
-	for(i=0;i<shnum;i++)
-		printf("%-40s 0x%08x\n", (sh_str + shdr_table[i].sh_name), shdr_table[i].sh_addr);
 
 	for(i=0;i<shnum;i++){
-		if(shdr_table[i].sh_type == SHT_SYMTAB || shdr_table[i].sh_type == SHT_DYNSYM){
-			elf_print_sym(fd, i, shdr_table);
-		}
+		if(shdr_table[i].sh_type == SHT_SYMTAB || shdr_table[i].sh_type == SHT_DYNSYM)
+			elf_print_sym(i, shdr_table);
 	}
 
-	free(sh_str);
-	free(shdr_table);
 	return;
 }
 
-void elf_init(int fd){
+void elf_fini(){
+	if(shdr_names){
+		free(shdr_names);
+		shdr_names = 0;
+	}
+	if(shdr_table){
+		free(shdr_table);
+		shdr_table = 0;
+	}
+	close(fd);
+
+	return;
+}
+
+void elf_init(char *elf){
 	Elf64_Ehdr *hdr_ret;
 	Elf64_Off shoff;
 	uint16_t shentsize, shnum;
 
-	hdr_ret = elf_read_hdr(fd, &hdr);
+	fd = open(elf, O_RDONLY);
+	if(fd < 0){
+		perror("[!] Failed to open file: ");
+		exit(EXIT_FAILURE);
+	}
+
+	hdr_ret = elf_read_hdr(&hdr);
 	if(!hdr_ret){
 		fprintf(stderr, "[!] Error (elf_init): received null hdr_ret pointer\n");
 		goto FAIL;
 	}
+
 	shentsize = hdr_ret->e_shentsize;
 	shnum = hdr_ret->e_shnum;
 	shoff = hdr_ret->e_shoff;
@@ -319,8 +343,7 @@ void elf_init(int fd){
 		fprintf(stderr, "[!] Error (elf_init): invalid e_shoff (%" PRIu64 ")\n", shoff);
 		goto FAIL;
 	}
-	elf_read_shdr(fd, shentsize, shnum, shoff);
-	//elf_read_phdr(fd);
+	elf_get_shdrs(shentsize, shnum, shoff);
 
 	FAIL: exit(EXIT_FAILURE);
 
@@ -328,19 +351,14 @@ void elf_init(int fd){
 }
 
 int main(int argc, char *argv[]){
-	int fd;
 
 	if(argc != 2){
 		//Usage:
 		exit(1);
 	}
 
-	fd = open(argv[1], O_RDONLY);
-	if(fd < 0){
-		perror("[!] Failed to open file: ");
-		exit(EXIT_FAILURE);
-	}
-	elf_init(fd);
+	elf_init(argv[1]);
+	elf_fini();
 
 	return 0;
 }
