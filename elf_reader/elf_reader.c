@@ -9,6 +9,13 @@
 #include <inttypes.h>
 #include <elf.h>
 
+typedef struct ELF_INFO{
+	int fd;
+	Elf64_Ehdr *hdr;
+	Elf64_Shdr *shdr_table;
+	char *shdr_names;
+}elf_info;
+
 int fd;
 Elf64_Shdr *shdr_table;
 char *shdr_names;
@@ -18,6 +25,28 @@ Elf64_Phdr phdr;
 Elf64_Shdr *shdr;
 
 unsigned char *text_seg;
+
+Elf64_Ehdr *elf_ret_hdr_cp(){
+	Elf64_Ehdr *new_hdr;
+	uint32_t hdr_size;
+	uint8_t MAGBUF[4] = {0x7f, 0x45, 0x4c, 0x46};
+
+	if((memcmp(MAGBUF, hdr.e_ident, 4)) != 0){
+		fprintf(stderr, "[!] Error: hdr has invalid magic number.\n");
+		return NULL;
+	}
+
+	hdr_size = sizeof(Elf64_Ehdr);
+	if(!(new_hdr = malloc(hdr_size))){
+		perror("[!] Error (elf_ret_hdr_cp): malloc failed ");
+		exit(EXIT_FAILURE);
+	}
+
+	memset(new_hdr, 0, hdr_size);
+	memcpy(new_hdr, &hdr, hdr_size);
+
+	return new_hdr;
+}
 
 Elf64_Ehdr *elf_read_hdr(Elf64_Ehdr *hdr){
 	uint32_t hdr_size;
@@ -187,8 +216,12 @@ char * elf_get_section_data(Elf64_Shdr *entry){
 	char *section;
 
 	if(!entry){
-		puts("[!] Error (elf_get_section): invalid argument.");
-		exit(EXIT_FAILURE);
+		fprintf(stderr, "[!] Error (elf_get_section): invalid argument.\n");
+		return NULL;
+	}
+	if(fd < 1){
+		fprintf(stderr, "[!] Error (elf_get_section): file descriptor has not been initialized.\n");
+		return NULL;
 	}
 
 	section = malloc(entry->sh_size);
@@ -249,19 +282,25 @@ void elf_print_section_data(unsigned char *data, uint16_t sh_size){
 	return;
 }
 
-void elf_get_shdrs(uint16_t shentsize, uint16_t shnum, Elf64_Off shoff){
+void elf_get_shdrs(Elf64_Ehdr *hdr){
 /*
 * The section header table is an array of Elf32_Shdr or Elf64_Shdr structures.
 */
-	uint32_t shdr_size;
-	uint16_t i;
 	Elf64_Shdr shdr;
-	int name_len;
-	int width;
-	
+	Elf64_Off shoff;
+	uint32_t shdr_size;
+	uint16_t shentsize, shnum, i;
+
+	if(!hdr){
+		fprintf(stderr, "[!] Error (elf_get_shdrs): invalid argument.\n");
+		return;
+	}
+	shentsize = hdr->e_shentsize;
+	shnum = hdr->e_shnum;
+	shoff = hdr->e_shoff;
 	if(!(shentsize || shnum) || (shoff < 1)){
 		fprintf(stderr, "[!] Error (elf_read_shdr): invalid uintN_t argument (very descriptive.. I know.)\n");
-		exit(EXIT_FAILURE);
+		return;
 	}
 
 	/*Allocate Section Header Table*/
@@ -274,6 +313,10 @@ void elf_get_shdrs(uint16_t shentsize, uint16_t shnum, Elf64_Off shoff){
 	memset(shdr_table, 0, shdr_size);
 
 	/*Read in Section Header entries*/
+	if(fd < 1){
+		fprintf(stderr, "[!] Error (elf_get_shdr): file descriptor has not been initialized.\n");
+		return;
+	}
 	if((lseek(fd, (off_t)shoff, SEEK_SET)) < 0){
 		perror("[!] Error (elf_read_shdr): lseek failed. ");
 		exit(EXIT_FAILURE);
@@ -282,7 +325,7 @@ void elf_get_shdrs(uint16_t shentsize, uint16_t shnum, Elf64_Off shoff){
 	for(i=0;i<shnum;i++)
 		read(fd, &shdr_table[i], shentsize);
 
-	shdr_names = elf_get_section_data(&shdr_table[hdr.e_shstrndx]);
+	shdr_names = elf_get_section_data(&shdr_table[hdr->e_shstrndx]);
 	for(i=0;i<shnum;i++){
 		printf("%-40s 0x%08x\n", (shdr_names + shdr_table[i].sh_name), shdr_table[i].sh_addr);
 		/*if(shdr_table[i].sh_type == SHT_PROGBITS){
@@ -315,37 +358,17 @@ void elf_fini(){
 	return;
 }
 
-void elf_init(char *elf){
+void elf_init(char *filename){
 	Elf64_Ehdr *hdr_ret;
-	Elf64_Off shoff;
-	uint16_t shentsize, shnum;
 
-	fd = open(elf, O_RDONLY);
+	fd = open(filename, O_RDONLY);
 	if(fd < 0){
 		perror("[!] Failed to open file: ");
 		exit(EXIT_FAILURE);
 	}
 
 	hdr_ret = elf_read_hdr(&hdr);
-	if(!hdr_ret){
-		fprintf(stderr, "[!] Error (elf_init): received null hdr_ret pointer\n");
-		goto FAIL;
-	}
-
-	shentsize = hdr_ret->e_shentsize;
-	shnum = hdr_ret->e_shnum;
-	shoff = hdr_ret->e_shoff;
-	if(!shentsize || !shnum){
-		fprintf(stderr, "[!] Error (elf_init): invalid e_shentsize (%" PRIu16 ") or e_shnum (%" PRIu16 ")\n", shentsize, shnum);
-		goto FAIL;
-	}
-	if(!shoff){
-		fprintf(stderr, "[!] Error (elf_init): invalid e_shoff (%" PRIu64 ")\n", shoff);
-		goto FAIL;
-	}
-	elf_get_shdrs(shentsize, shnum, shoff);
-
-	FAIL: exit(EXIT_FAILURE);
+	elf_get_shdrs(&hdr);
 
 	return;
 }
