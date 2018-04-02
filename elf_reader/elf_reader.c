@@ -15,59 +15,29 @@ typedef struct ELF_INFO{
 	uint16_t next_shdrndx;
 	Elf64_Ehdr *hdr;
 	Elf64_Shdr *shdr_table;
-	char *shdr_names;
-	unsigned char *text_seg;
+	char *shdr_names;	
+	unsigned char *seg_data;
 }elf_info;
 
 elf_info *ei_table;
 
-/*int fd;
-Elf64_Shdr *shdr_table;
-char *shdr_names;
-
-Elf64_Ehdr hdr;
-Elf64_Phdr phdr;
-Elf64_Shdr *shdr;
-
-unsigned char *text_seg;
-
-Elf64_Ehdr *elf_ret_hdr_cp(){
-	Elf64_Ehdr *new_hdr;
-	uint32_t hdr_size;
-	uint8_t MAGBUF[4] = {0x7f, 0x45, 0x4c, 0x46};
-
-	if((memcmp(MAGBUF, hdr.e_ident, 4)) != 0){
-		fprintf(stderr, "[!] Error: hdr has invalid magic number.\n");
-		return NULL;
-	}
-
-	hdr_size = sizeof(Elf64_Ehdr);
-	if(!(new_hdr = malloc(hdr_size))){
-		perror("[!] Error (elf_ret_hdr_cp): malloc failed ");
-		exit(EXIT_FAILURE);
-	}
-
-	memset(new_hdr, 0, hdr_size);
-	memcpy(new_hdr, &hdr, hdr_size);
-
-	return new_hdr;
-}
-*/
-Elf64_Ehdr *elf_read_hdr(Elf64_Ehdr *hdr){
+Elf64_Ehdr *elf_read_hdr(elf_info *_ei_table){
+	Elf64_Ehdr *hdr;
 	uint32_t hdr_size;
 	uint8_t MAGBUF[4] = {0x7f, 0x45, 0x4c, 0x46};
 	int fd;
 
-	if(!hdr){
-		fprintf(stderr, "[!] Error (elf_read_hdr): null argument\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if(!ei_table){
-		fprintf(stderr, "[!] Error (elf_read_hdr): ei_table has not been initialized.\n");
+	if(!_ei_table){
+		fprintf(stderr, "[!] Error (elf_read_hdr): null argument.\n");
 		return NULL;
 	}
-	fd = ei_table->fd;
+
+	hdr = _ei_table->hdr;
+	fd = _ei_table->fd;
+	if(!hdr){
+		fprintf(stderr, "[!] Error (elf_read_hdr): null ei_table hdr.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	hdr_size = sizeof(Elf64_Ehdr);
 	memset(hdr, 0, hdr_size);
@@ -353,74 +323,57 @@ Elf64_Shdr *elf_set_shdr_table(Elf64_Ehdr *hdr){
 	return shdr_table;
 }
 
-void elf_get_shdrs(Elf64_Ehdr *hdr){
-/*
-* The section header table is an array of Elf32_Shdr or Elf64_Shdr structures.
-*/
-	Elf64_Shdr shdr;
+void elf_get_symbols(elf_info *_ei_table){
 	Elf64_Shdr *shdr_table;
-	Elf64_Off shoff;
-	uint32_t shdr_size;
-	uint16_t shentsize, shnum, i;
-	int fd;
+	uint16_t i;
 
-	if(!hdr){
-		fprintf(stderr, "[!] Error (elf_get_shdrs): invalid argument.\n");
-		return;
-	}
-	shentsize = hdr->e_shentsize;
-	shnum = hdr->e_shnum;
-	shoff = hdr->e_shoff;
-	if(!(shentsize || shnum) || (shoff < 1)){
-		fprintf(stderr, "[!] Error (elf_read_shdr): invalid uintN_t argument (very descriptive.. I know.)\n");
-		return;
-	}
-
-	/*Allocate Section Header Table*/
-	if(!ei_table){
-		fprintf(stderr, "[!] Error (elf_read_shdr): ei_table has not been initialized.\n");
-		return;
-	}
-	shdr_size = (shentsize * shnum);
-	ei_table->shdr_table = malloc(shdr_size);
-	if(!ei_table->shdr_table){
-		perror("[!] Error (elf_read_shdr): malloc failed. ");
-		exit(EXIT_FAILURE);
-	}
-	shdr_table = ei_table->shdr_table;
-	memset(shdr_table, 0, shdr_size);
-
-	/*Read in Section Header entries*/
-	fd = ei_table->fd;
-	if(fd < 1){
-		fprintf(stderr, "[!] Error (elf_get_shdr): file descriptor has not been initialized.\n");
-		return;
-	}
-	if((lseek(fd, (off_t)shoff, SEEK_SET)) < 0){
-		perror("[!] Error (elf_read_shdr): lseek failed. ");
+	if(!_ei_table){
+		fprintf(stderr, "[!] Error (elf_get_symbols): received null argument.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	for(i=0;i<shnum;i++)
-		read(fd, &shdr_table[i], shentsize);
-
-	ei_table->shdr_names = elf_get_section_data(&shdr_table[hdr->e_shstrndx]);
-	for(i=0;i<shnum;i++){
-		printf("%-40s 0x%08x\n", (ei_table->shdr_names + shdr_table[i].sh_name), shdr_table[i].sh_addr);
-		/*if(shdr_table[i].sh_type == SHT_PROGBITS){
-			if(!(memcmp((sh_str + shdr_table[i].sh_name), ".text", strlen(".text")))){
-				text_seg = (unsigned char*)elf_get_section_data(fd, &shdr_table[i]);
-				elf_print_section_data(text_seg, shdr_table[i].sh_size);
-			}
-		}*/
+	shdr_table = _ei_table->shdr_table;
+	if(!shdr_table){
+		fprintf(stderr, "[!] Error (elf_get_symbols): ei_table's shdr_table has not been initialized.\n");
+		exit(EXIT_FAILURE);
 	}
 
-	for(i=0;i<shnum;i++){
+	for(i=0;i<ei_table->hdr->e_shnum;i++){
 		if(shdr_table[i].sh_type == SHT_SYMTAB || shdr_table[i].sh_type == SHT_DYNSYM)
 			elf_print_sym(i, shdr_table);
 	}
 
 	return;
+}
+
+uint64_t elf_get_textseg_data(elf_info *_ei_table){
+/*
+* Fill ei_table's seg_data and returns the data's size in bytes
+*/
+	Elf64_Shdr *shdr_table;
+	char *shdr_names;
+	uint16_t i, shnum;
+
+	if(!_ei_table){
+		fprintf(stderr, "[!] Error (elf_get_textseg_data): received null argument.\n");
+		return 0;
+	}
+	//TODO: check _ei_table->shdr_table and hdr->e_shnum
+
+	shdr_table = _ei_table->shdr_table;
+	shdr_names = _ei_table->shdr_names;	
+	shnum = _ei_table->hdr->e_shnum;
+
+	for(i=0;i<shnum;i++){
+		if(shdr_table[i].sh_type == SHT_PROGBITS){
+			if(!(memcmp((shdr_names + shdr_table[i].sh_name), ".text", strlen(".text")))){
+				_ei_table->seg_data = (unsigned char*)elf_get_section_data(&shdr_table[i]);
+				break;	
+			}
+		}
+	}
+	
+	return shdr_table[i].sh_size;
 }
 
 char *elf_shdr_entry_name(elf_info *_ei_table, Elf64_Shdr *entry){
@@ -445,8 +398,8 @@ Elf64_Shdr *elf_next_shdr_entry(elf_info *_ei_table){
 		fprintf(stderr, "[!] Error (elf_next_shdr_entry): invalid elf_info table.\n");
 		exit(EXIT_FAILURE);
 	}
-	if((_ei_table->next_shdrndx > _ei_table->hdr->e_shnum)){
-		fprintf(stderr, "[!] Error (elf_next_shdr_entry): next_shdrndx out of range.\n");
+	if((_ei_table->next_shdrndx >= _ei_table->hdr->e_shnum)){
+		//fprintf(stderr, "[!] Error (elf_next_shdr_entry): next_shdrndx out of range.\n");
 		return NULL;
 	}
 	if(!_ei_table->shdr_table){
@@ -486,8 +439,8 @@ void elf_fini(){
 }
 
 void elf_init(char *filename){
-	//Elf64_Ehdr *hdr_ret;
 	Elf64_Shdr *entry;
+	uint64_t data_size;
 	int fd;
 
 	fd = open(filename, O_RDONLY);
@@ -505,16 +458,18 @@ void elf_init(char *filename){
 	memset(ei_table->hdr, 0, sizeof(Elf64_Ehdr));
 
 	ei_table->fd = fd;
-	elf_read_hdr(ei_table->hdr);
+	elf_read_hdr(ei_table);
 	if(!(elf_set_shdr_table(ei_table->hdr))){
 		puts("[!] Error: elf_set_shdr_table returned NULL.");
 		exit(EXIT_FAILURE);
 	}
-	while(1){
-		if(!(entry = elf_next_shdr_entry(ei_table)))
-			break;
+	while((entry = elf_next_shdr_entry(ei_table)))
 		printf("%-40s 0x%08x\n", elf_shdr_entry_name(ei_table, entry), entry->sh_addr);
-	}
+
+	elf_get_symbols(ei_table);
+	data_size = elf_get_textseg_data(ei_table);
+	if(data_size > 0)
+		elf_print_section_data(ei_table->seg_data, data_size);
 	//elf_get_shdrs(ei_table->hdr);
 
 	return;
