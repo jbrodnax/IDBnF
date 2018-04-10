@@ -15,6 +15,9 @@ typedef struct ELF_INFO{
 	uint16_t next_shdrndx;
 	Elf64_Ehdr *hdr;
 	Elf64_Shdr *shdr_table;
+	Elf64_Sym *sym_table;
+	char *sym_names;
+	uint32_t sym_count;
 	char *shdr_names;	
 	unsigned char *seg_data;
 }elf_info;
@@ -230,11 +233,19 @@ char * elf_get_section_data(Elf64_Shdr *entry){
 	return section;
 }
 
-void elf_print_sym(uint16_t sym_index, Elf64_Shdr *shdr_table){
+void elf_set_sym(uint16_t sym_index, elf_info *_ei_table){//Elf64_Shdr *shdr_table){
 	Elf64_Sym *sym_table;
 	Elf64_Shdr shdr;
+	Elf64_Shdr *shdr_table;
 	uint32_t sym_count, i;
 	char *str_table;
+
+	if(_ei_table)
+		shdr_table = _ei_table->shdr_table;
+	if(!shdr_table){
+		fprintf(stderr, "[!] Error: ei_table's shdr_table has not been initialized.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	shdr = shdr_table[sym_index];
 	sym_table = (Elf64_Sym *)elf_get_section_data(&shdr);
@@ -244,12 +255,15 @@ void elf_print_sym(uint16_t sym_index, Elf64_Shdr *shdr_table){
 
 	puts("\nFunctions: (Symbol Type: STT_FUNC)");
 	for(i=0;i<sym_count;i++){
-		if(ELF64_ST_TYPE(sym_table[i].st_info) == STT_FUNC)
-			printf("%-40s 0x%08x\n", (str_table + sym_table[i].st_name), sym_table[i].st_value);
+		if(ELF64_ST_TYPE(sym_table[i].st_info) == STT_FUNC){
+			printf("%-40s 0x%08x\t%d\n", (str_table + sym_table[i].st_name), sym_table[i].st_value, sym_table[i].st_size);
+		}
 	}
 
-	free(str_table);
-	free(sym_table);
+	_ei_table->sym_table = sym_table;
+	_ei_table->sym_names = str_table;
+	_ei_table->sym_count = sym_count;
+
 	return;
 }
 
@@ -269,13 +283,19 @@ void elf_print_section_data(unsigned char *data, uint16_t sh_size){
 	return;
 }
 
-Elf64_Shdr *elf_set_shdr_table(Elf64_Ehdr *hdr){
+Elf64_Shdr *elf_set_shdr_table(elf_info *_ei_table, Elf64_Ehdr *hdr){
+/*
+* Initializes an Elf64 Section Header table, fills and returns it. Also inits section counter in ei_table to 0
+*/
+	elf_info *ei_table;
 	Elf64_Shdr *shdr_table;
 	Elf64_Off shoff;
 	uint32_t shdr_size;
 	uint16_t i;
 	int fd;
 
+	if(_ei_table)
+		ei_table = _ei_table;
 	if(!hdr){
 		fprintf(stderr, "[!] Error (elf_set_shdr_table): invalid argument.\n");
 		return NULL;
@@ -324,6 +344,9 @@ Elf64_Shdr *elf_set_shdr_table(Elf64_Ehdr *hdr){
 }
 
 void elf_get_symbols(elf_info *_ei_table){
+/*
+* Prints defined symbols (static and dynamic) in the elf file.
+*/
 	Elf64_Shdr *shdr_table;
 	uint16_t i;
 
@@ -339,8 +362,8 @@ void elf_get_symbols(elf_info *_ei_table){
 	}
 
 	for(i=0;i<ei_table->hdr->e_shnum;i++){
-		if(shdr_table[i].sh_type == SHT_SYMTAB || shdr_table[i].sh_type == SHT_DYNSYM)
-			elf_print_sym(i, shdr_table);
+		if(shdr_table[i].sh_type == SHT_SYMTAB)//|| shdr_table[i].sh_type == SHT_DYNSYM)
+			elf_set_sym(i, _ei_table);
 	}
 
 	return;
@@ -377,6 +400,9 @@ uint64_t elf_get_textseg_data(elf_info *_ei_table){
 }
 
 char *elf_shdr_entry_name(elf_info *_ei_table, Elf64_Shdr *entry){
+/*
+* Returns pointer to name of given section header entry.
+*/
 
 	if(!entry || !_ei_table){
 		fprintf(stderr, "[!] Error (elf_shdr_entry_name): received null argument.\n");
@@ -432,6 +458,14 @@ void elf_fini(){
 			free(shdr_table);
 			shdr_table = 0;
 		}
+		if(ei_table->sym_table){
+			free(ei_table->sym_table);
+			ei_table->sym_table = 0;
+		}
+		if(ei_table->sym_names){
+			free(ei_table->sym_names);
+			ei_table->sym_names = 0;
+		}
 		close(fd);
 	}
 
@@ -459,7 +493,7 @@ void elf_init(char *filename){
 
 	ei_table->fd = fd;
 	elf_read_hdr(ei_table);
-	if(!(elf_set_shdr_table(ei_table->hdr))){
+	if(!(elf_set_shdr_table(ei_table, ei_table->hdr))){
 		puts("[!] Error: elf_set_shdr_table returned NULL.");
 		exit(EXIT_FAILURE);
 	}
