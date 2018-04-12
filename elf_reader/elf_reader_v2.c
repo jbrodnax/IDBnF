@@ -16,6 +16,8 @@ char err_set_Shdr_table[]="(elf_set_Shdr_table): ";
 char err_set_sym_table[]="(elf_set_sym_table): ";
 char err_get_section_data[]="(elf_get_section_data): ";
 char err_print_symbols[]="(elf_print_symbols): ";
+char err_print_sections[]="(elf_print_sections): ";
+char err_section_search[]="(elf_section_search): ";
 
 typedef struct ELF_INFO{
 	char *filename;
@@ -71,6 +73,8 @@ char * elf_get_section_data(elf_info *ei_table, Elf64_Shdr *entry){
 }
 
 int elf_print_symbols(elf_info *ei_table, uint32_t symtype){
+/*Prints static or dynamic symbol table entry information for all entries whose st_info matches STT_FUNC.
+The table type is specified by the symtype parameter which can be either SHT_SYMTAB or SHT_DYNSYM.*/
 	Elf64_Shdr *shdr_table;
 	Elf64_Sym *sym_table;
 	uint32_t sym_count, j;
@@ -104,14 +108,91 @@ int elf_print_symbols(elf_info *ei_table, uint32_t symtype){
 	for(i=0;i<ei_table->hdr->e_shnum;i++){
 		if(shdr_table[i].sh_type == symtype){
 			sym_count = (shdr_table[i].sh_size/sizeof(Elf64_Sym));
+			printf("\nSymbols:\n");
 			for(j=0;j<sym_count;j++){
 				if(ELF64_ST_TYPE(sym_table[j].st_info) == STT_FUNC)
-					printf("%-40s 0x%08x\n", (sym_names + sym_table[j].st_name), sym_table[j].st_value);
+					printf("%-40s 0x%"PRIx64"\n", (sym_names + sym_table[j].st_name), sym_table[j].st_value);
 			}
 		}
 	}
 
 	return 0;
+}
+
+int elf_print_sections(elf_info *ei_table){
+	Elf64_Shdr *shdr_table;
+	Elf64_Shdr *entry;
+	Elf64_Ehdr *hdr;
+	char *shdr_names;
+	uint16_t i;
+
+	if(!ei_table){
+		fprintf(stderr, "%s%sreceived null ei_table.\n", err_, err_print_sections);
+		return -1;
+	}
+
+	shdr_table = ei_table->shdr_table;
+	hdr = ei_table->hdr;
+	shdr_names = ei_table->shdr_names;
+	if(!shdr_table || !hdr || !shdr_names){
+		fprintf(stderr, "%s%sei_table has not been initialized or has been corrupted.\n", err_, err_print_sections);
+		return -1;
+	}
+
+	printf("\nSection Header Entries:\n");
+	for(i=0;i<hdr->e_shnum;i++){
+		entry = &shdr_table[i];
+		printf("%-40s 0x%"PRIx64"\n", (shdr_names + entry->sh_name), entry->sh_addr);
+	}
+
+	return 0;
+}
+
+Elf64_Shdr *elf_section_search(elf_info *ei_table, char *name, uint64_t addr){
+	Elf64_Shdr *shdr_table;
+	Elf64_Shdr *entry;
+	Elf64_Ehdr *hdr;
+	size_t name_len;
+	uint16_t i;
+	char *shdr_names;
+
+	if(!ei_table){
+		fprintf(stderr, "%s%sreceived null ei_table.\n", err_, err_section_search);
+		return NULL;
+	}
+
+	if(!ei_table->hdr || !ei_table->shdr_table || !ei_table->shdr_names){
+		fprintf(stderr, "%s%sei_table's elf header has not been initialized.\n", err_, err_section_search);
+		return NULL;
+	}
+
+	hdr = ei_table->hdr;
+	shdr_table = ei_table->shdr_table;
+	shdr_names = ei_table->shdr_names;
+
+	if(name == NULL)
+		goto ADDR;
+
+	name_len = strlen(name);
+	if(name_len < 1){
+		fprintf(stderr, "%s%sinvalid name length.\n", err_, err_section_search);
+		return NULL;
+	}
+
+	for(i=0;i<hdr->e_shnum;i++){
+		entry = &shdr_table[i];
+		if((memcmp((shdr_names + entry->sh_name), name, name_len)) == 0)
+			return entry;
+	}
+
+	ADDR:
+		for(i=0;i<hdr->e_shnum;i++){
+			entry = &shdr_table[i];
+			if(entry->sh_addr == addr)
+				return entry;
+		}
+
+	return entry;
 }
 
 Elf64_Ehdr *elf_set_Ehdr(elf_info *ei_table){
@@ -202,6 +283,8 @@ Elf64_Shdr *elf_set_Shdr_table(elf_info *ei_table){
 }
 
 Elf64_Sym *elf_set_sym_table(elf_info *ei_table, uint32_t symtype){
+/*Reads and initializes dynamically or statically linked symbol table and associated string table.
+The symbol table type is specified by symtype and can be either SHT_SYMTAB or SHT_DYNSYM.*/
 	Elf64_Sym *sym_table;
 	Elf64_Shdr *shdr_table;
 	Elf64_Shdr shdr_entry;
@@ -233,10 +316,6 @@ Elf64_Sym *elf_set_sym_table(elf_info *ei_table, uint32_t symtype){
 		sym_names = elf_get_section_data(ei_table, &shdr_table[shdr_entry.sh_link]);
 		sym_count = (shdr_table[i].sh_size/sizeof(Elf64_Sym));
 
-		/*for(j=0;j<sym_count;j++){
-			if(ELF64_ST_TYPE(sym_table[j].st_info) == STT_FUNC)
-				printf("%-40s 0x%08x\n", (sym_names + sym_table[j].st_name), sym_table[j].st_value);
-		}*/
 		if(symtype == SHT_SYMTAB){
 			ei_table->stc_sym_table = sym_table;
 			ei_table->stc_sym_names = sym_names;
@@ -271,6 +350,7 @@ void elf_fini(elf_info *ei_table){
 		free(ei_table->dyn_sym_names);
 	close(ei_table->fd);
 	memset(ei_table, 0, sizeof(elf_info));
+	free(ei_table);
 
 	return;
 }
@@ -307,13 +387,20 @@ elf_info *elf_init(char *filename){
 
 int main(int argc, char **argv){
 	elf_info *ei_table;
+	Elf64_Shdr *search_res;
 
 	ei_table = elf_init(argv[1]);
 	if(!ei_table)
 		return -1;
 
+	elf_print_sections(ei_table);
 	elf_print_symbols(ei_table, SHT_SYMTAB);
 	elf_print_symbols(ei_table, SHT_DYNSYM);
+	if((search_res = elf_section_search(ei_table, ".text", 0))){
+		printf("[*] Section Search returned:\n0x%"PRIx64"\n", search_res->sh_addr);
+		if((search_res = elf_section_search(ei_table, NULL, search_res->sh_addr)))
+			printf("[*] Section Search returned:\n0x%"PRIx64"\n", search_res->sh_addr);
+	}
 	elf_fini(ei_table);
 
 	return 0;
