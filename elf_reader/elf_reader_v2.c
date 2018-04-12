@@ -15,9 +15,11 @@ char err_init[]="(elf_init): ";
 char err_set_Shdr_table[]="(elf_set_Shdr_table): ";
 char err_set_sym_table[]="(elf_set_sym_table): ";
 char err_get_section_data[]="(elf_get_section_data): ";
+char err_get_symbol_instructions[]="(elf_get_symbol_instructions): ";
 char err_print_symbols[]="(elf_print_symbols): ";
 char err_print_sections[]="(elf_print_sections): ";
 char err_section_search[]="(elf_section_search): ";
+char err_symbol_search[]="(elf_symbol_search): ";
 
 typedef struct ELF_INFO{
 	char *filename;
@@ -30,6 +32,8 @@ typedef struct ELF_INFO{
 	char *shdr_names;
 	char *stc_sym_names;
 	char *dyn_sym_names;
+	uint32_t stc_sym_size;
+	uint32_t dyn_sym_size;
 	unsigned char *seg_data;
 }elf_info;
 
@@ -70,6 +74,34 @@ char * elf_get_section_data(elf_info *ei_table, Elf64_Shdr *entry){
 	}
 
 	return section;
+}
+
+unsigned char *elf_get_symbol_instructions(elf_info *ei_table, Elf64_Sym *symbol, Elf64_Shdr *section){
+	unsigned char *section_data;
+	unsigned char *instrs;
+	uint64_t section_start;
+
+	if(!symbol || !section){
+		fprintf(stderr, "%s%sreceived null argument.\n", err_, err_get_symbol_instructions);
+		return NULL;
+	}
+
+	if(symbol->st_size == 0 || symbol->st_value == 0)
+		return NULL;
+
+	if(section->sh_flags != SHF_EXECINSTR){
+		fprintf(stderr, "%s%ssection does not contain executable instructions.\n", err_, err_get_symbol_instructions);
+		return NULL;
+	}
+
+	section_start = section->sh_addr;
+	if(!(section_data = (unsigned char *)elf_get_section_data(ei_table, section)))
+		return NULL;
+
+	instrs = malloc_s(symbol->st_size);
+	memcpy(instrs, (section_data + (symbol->st_value - section_start)), symbol->st_size);
+
+	return instrs;
 }
 
 int elf_print_symbols(elf_info *ei_table, uint32_t symtype){
@@ -192,7 +224,39 @@ Elf64_Shdr *elf_section_search(elf_info *ei_table, char *name, uint64_t addr){
 				return entry;
 		}
 
-	return entry;
+	return NULL;
+}
+
+Elf64_Sym *elf_symbol_search(elf_info *ei_table, char *name, uint64_t addr){
+	Elf64_Sym *sym_table;
+	Elf64_Sym *entry;
+	uint32_t sym_count, i;
+	size_t name_len;
+	char *sym_names;
+
+	if(!ei_table){
+		fprintf(stderr, "%s%sreceived null ei_table.\n", err_, err_symbol_search);
+		return NULL;
+	}
+
+	/*TODO: implement search by address and searching dynamically linked sym table*/
+	if(ei_table->stc_sym_table){	
+		sym_table = ei_table->stc_sym_table;
+		sym_names = ei_table->stc_sym_names;
+		sym_count = ei_table->stc_sym_size;
+
+		name_len = strlen(name);
+		if(name_len < 1)
+			return NULL;
+	
+		for(i=0;i<sym_count;i++){
+			entry = &sym_table[i];	
+			if((memcmp(name, (sym_names + entry->st_name), name_len)) == 0)
+				return entry;
+		}
+	}
+
+	return NULL;
 }
 
 Elf64_Ehdr *elf_set_Ehdr(elf_info *ei_table){
@@ -319,9 +383,11 @@ The symbol table type is specified by symtype and can be either SHT_SYMTAB or SH
 		if(symtype == SHT_SYMTAB){
 			ei_table->stc_sym_table = sym_table;
 			ei_table->stc_sym_names = sym_names;
+			ei_table->stc_sym_size = sym_count;
 		}else if(symtype == SHT_DYNSYM){
 			ei_table->dyn_sym_table = sym_table;
 			ei_table->dyn_sym_names = sym_names;
+			ei_table->dyn_sym_size = sym_count;
 		}
 
 		return sym_table;
@@ -388,6 +454,7 @@ elf_info *elf_init(char *filename){
 int main(int argc, char **argv){
 	elf_info *ei_table;
 	Elf64_Shdr *search_res;
+	Elf64_Sym *sym_search;
 
 	ei_table = elf_init(argv[1]);
 	if(!ei_table)
@@ -396,11 +463,10 @@ int main(int argc, char **argv){
 	elf_print_sections(ei_table);
 	elf_print_symbols(ei_table, SHT_SYMTAB);
 	elf_print_symbols(ei_table, SHT_DYNSYM);
-	if((search_res = elf_section_search(ei_table, ".text", 0))){
-		printf("[*] Section Search returned:\n0x%"PRIx64"\n", search_res->sh_addr);
-		if((search_res = elf_section_search(ei_table, NULL, search_res->sh_addr)))
-			printf("[*] Section Search returned:\n0x%"PRIx64"\n", search_res->sh_addr);
-	}
+	if((search_res = elf_section_search(ei_table, ".text", 0)))
+		printf("[*] Section Search returned:\n0x%"PRIx64"\n", search_res->sh_addr);	
+	if((sym_search = elf_symbol_search(ei_table, "main", 0)))
+		printf("[*] Symbol Search returned:\n0x%"PRIx64"\n", sym_search->st_value);
 	elf_fini(ei_table);
 
 	return 0;
