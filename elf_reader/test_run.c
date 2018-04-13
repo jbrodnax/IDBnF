@@ -1,4 +1,4 @@
-#include "elf_reader.h"
+#include "elf_rdr.h"
 
 int main(int argc, char **argv){
 	elf_info *ei_table;

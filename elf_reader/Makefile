@@ -2,10 +2,13 @@ CC=gcc
 CFLAGSDB=-Wall -W -g -Werror
 CFLAGS=-g -o
 
-all: elf_reader
+all: elf_reader test_run
 
-elf_reader: test_driver.c elf_reader_v2.c
-	$(CC) test_driver.c elf_reader_v2.c $(CFLAGS) elf_reader
+elf_reader: elf_reader_v2.c
+	$(CC) -o elf_rdr.o -c elf_reader_v2.c
+
+test_run: test_run.c
+	$(CC) test_run.c -o test_run elf_rdr.o 
 
 clean:
-	rm -f elf_reader *.o
+	rm -f elf_rdr *.o; rm -f test_run *.o

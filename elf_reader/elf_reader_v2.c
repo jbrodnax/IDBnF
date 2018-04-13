@@ -1,4 +1,4 @@
-#include "elf_reader.h"
+#include "elf_rdr.h"
 
 char err_[] = "[!] Error ";
 char err_set_Ehdr[]="(elf_set_Ehdr): ";
