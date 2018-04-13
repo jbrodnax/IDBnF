@@ -1,13 +1,4 @@
-#include <stdio.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <inttypes.h>
-#include <elf.h>
+#include "elf_reader.h"
 
 char err_[] = "[!] Error ";
 char err_set_Ehdr[]="(elf_set_Ehdr): ";
@@ -20,22 +11,6 @@ char err_print_symbols[]="(elf_print_symbols): ";
 char err_print_sections[]="(elf_print_sections): ";
 char err_section_search[]="(elf_section_search): ";
 char err_symbol_search[]="(elf_symbol_search): ";
-
-typedef struct ELF_INFO{
-	char *filename;
-	int fd;
-	Elf64_Ehdr *hdr;
-	Elf64_Shdr *shdr_table;
-	Elf64_Sym *stc_sym_table;
-	Elf64_Sym *dyn_sym_table;
-	char *hdr_summary;
-	char *shdr_names;
-	char *stc_sym_names;
-	char *dyn_sym_names;
-	uint32_t stc_sym_size;
-	uint32_t dyn_sym_size;
-	unsigned char *seg_data;
-}elf_info;
 
 void *malloc_s(size_t s){
 	void *p;
@@ -76,24 +51,21 @@ char * elf_get_section_data(elf_info *ei_table, Elf64_Shdr *entry){
 	return section;
 }
 
-unsigned char *elf_get_symbol_instructions(elf_info *ei_table, Elf64_Sym *symbol, Elf64_Shdr *section){
+unsigned char *elf_get_symbol_instructions(elf_info *ei_table, Elf64_Sym *symbol){
+	Elf64_Shdr *section;
 	unsigned char *section_data;
 	unsigned char *instrs;
 	uint64_t section_start;
 
-	if(!symbol || !section){
+	if(!symbol || !ei_table){
 		fprintf(stderr, "%s%sreceived null argument.\n", err_, err_get_symbol_instructions);
 		return NULL;
 	}
 
-	if(symbol->st_size == 0 || symbol->st_value == 0)
+	if(symbol->st_size == 0 || symbol->st_value == 0 || !ei_table->shdr_table)
 		return NULL;
 
-	if(section->sh_flags != SHF_EXECINSTR){
-		fprintf(stderr, "%s%ssection does not contain executable instructions.\n", err_, err_get_symbol_instructions);
-		return NULL;
-	}
-
+	section = &ei_table->shdr_table[symbol->st_shndx];
 	section_start = section->sh_addr;
 	if(!(section_data = (unsigned char *)elf_get_section_data(ei_table, section)))
 		return NULL;
@@ -231,7 +203,7 @@ Elf64_Sym *elf_symbol_search(elf_info *ei_table, char *name, uint64_t addr){
 	Elf64_Sym *sym_table;
 	Elf64_Sym *entry;
 	uint32_t sym_count, i;
-	size_t name_len;
+	size_t name_len, stat;
 	char *sym_names;
 
 	if(!ei_table){
@@ -239,22 +211,44 @@ Elf64_Sym *elf_symbol_search(elf_info *ei_table, char *name, uint64_t addr){
 		return NULL;
 	}
 
-	/*TODO: implement search by address and searching dynamically linked sym table*/
-	if(ei_table->stc_sym_table){	
-		sym_table = ei_table->stc_sym_table;
-		sym_names = ei_table->stc_sym_names;
-		sym_count = ei_table->stc_sym_size;
+	stat = 0;
 
-		name_len = strlen(name);
-		if(name_len < 1)
-			return NULL;
-	
-		for(i=0;i<sym_count;i++){
-			entry = &sym_table[i];	
-			if((memcmp(name, (sym_names + entry->st_name), name_len)) == 0)
-				return entry;
+	TABLE:
+		if(ei_table->stc_sym_table && stat == 0){
+			sym_table = ei_table->stc_sym_table;
+			sym_names = ei_table->stc_sym_names;
+			sym_count = ei_table->stc_sym_size;
+			stat = 1;
+			goto ITER;
 		}
-	}
+		else if(ei_table->dyn_sym_table && stat == 1){
+			sym_table = ei_table->dyn_sym_table;
+			sym_names = ei_table->dyn_sym_names;
+			sym_count = ei_table->dyn_sym_size;
+			stat = 2;
+			goto ITER;
+		}
+
+		return NULL;
+
+	ITER:
+		if(name){
+			name_len = strlen(name);
+			if(name_len < 1)
+				return NULL;
+
+			for(i=0;i<sym_count;i++){
+				entry = &sym_table[i];
+				if((memcmp(name, (sym_names + entry->st_name), name_len)) == 0)
+					return entry;
+			}
+		}else{
+			for(i=0;i<sym_count;i++){
+				entry = &sym_table[i];
+				if(entry->st_value == addr)
+					return entry;
+			}
+		}
 
 	return NULL;
 }
@@ -450,11 +444,13 @@ elf_info *elf_init(char *filename){
 
 	return ei_table;
 }
-
+/*
 int main(int argc, char **argv){
 	elf_info *ei_table;
 	Elf64_Shdr *search_res;
 	Elf64_Sym *sym_search;
+	unsigned char *instrs;
+	uint64_t i;
 
 	ei_table = elf_init(argv[1]);
 	if(!ei_table)
@@ -465,13 +461,24 @@ int main(int argc, char **argv){
 	elf_print_symbols(ei_table, SHT_DYNSYM);
 	if((search_res = elf_section_search(ei_table, ".text", 0)))
 		printf("[*] Section Search returned:\n0x%"PRIx64"\n", search_res->sh_addr);	
-	if((sym_search = elf_symbol_search(ei_table, "main", 0)))
-		printf("[*] Symbol Search returned:\n0x%"PRIx64"\n", sym_search->st_value);
+	if((sym_search = elf_symbol_search(ei_table, "func1", 0))){
+		printf("[*] Symbol Search returned:\nName:\t%s\tAddress:\t0x%"PRIx64"\n",
+			(ei_table->stc_sym_names + sym_search->st_name),
+			sym_search->st_value);
+	}
+	if((instrs = elf_get_symbol_instructions(ei_table, sym_search))){
+		printf("[*] Opcodes for %s (0x%"PRIx64"):\n", (ei_table->stc_sym_names + sym_search->st_name), sym_search->st_value);
+		for(i=0;i<sym_search->st_size;i++){
+			printf("%02x ", instrs[i]);
+		}
+		puts("");
+	}
+
 	elf_fini(ei_table);
 
 	return 0;
 }
-
+*/
 
 
 
